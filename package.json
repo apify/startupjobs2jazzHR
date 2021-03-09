@@ -1,0 +1,30 @@
+{
+  "name": "startupjobs2jazzhr",
+  "version": "1.0.0",
+  "description": "Add new applications from startupjobs to jazzHR",
+  "main": "main.js",
+  "scripts": {
+		"start": "node main.js",
+		"test": "echo \"Error: oops, the actor has no tests yet, sad!\" && exit 1"
+	},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nguyeda1/startupjobs2jazzHR.git"
+  },
+  "keywords": [
+    "startup",
+    "jobs",
+    "jazzHR"
+  ],
+  "author": "Dan Nguyen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nguyeda1/startupjobs2jazzHR/issues"
+  },
+  "homepage": "https://github.com/nguyeda1/startupjobs2jazzHR#readme",
+  "dependencies": {
+		"apify": "^1.0.1"
+	},
+	"devDependencies": {}
+
+}
