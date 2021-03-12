@@ -1,14 +1,24 @@
 {
-  "title": "Input schema for the hello_word actor.",
+  "title": "startupjobs2jazzHR actor input schema",
+  "description": "Input schema for the startupjobs2jazzHR actor.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
-    "message": {
-      "title": "Message",
+    "startupJobsToken": {
+      "title": "Startupjobs.cz token",
       "type": "string",
-      "description": "Just enter your hello world message.",
+      "description": "Your statupjobs.cz token.",
+      "editor": "textfield"
+    },
+    "jazzHRToken": {
+      "title": "JazzHR token",
+      "type": "string",
+      "description": "Your jazzHR token.",
       "editor": "textfield"
     }
   },
-  "required": []
+  "required": [
+    "startupJobsToken",
+    "jazzHRToken"
+  ]
 }

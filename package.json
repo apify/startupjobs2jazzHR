@@ -4,12 +4,13 @@
   "description": "Add new applications from startupjobs to jazzHR",
   "main": "main.js",
   "scripts": {
-		"start": "node main.js",
-		"test": "echo \"Error: oops, the actor has no tests yet, sad!\" && exit 1"
-	},
+    "start": "node main.js",
+    "test": "echo \"Error: oops, the actor has no tests yet, sad!\" && exit 1"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nguyeda1/startupjobs2jazzHR.git"
+    "url": "git+https://github.com/nguyeda1/startupjobs2jazzHR.git",
+    "lint": "eslint '*/**/*.js' --quiet --fix"
   },
   "keywords": [
     "startup",
@@ -23,8 +24,14 @@
   },
   "homepage": "https://github.com/nguyeda1/startupjobs2jazzHR#readme",
   "dependencies": {
-		"apify": "^1.0.1"
-	},
-	"devDependencies": {}
-
+    "apify": "^1.0.1",
+    "axios": "^0.21.1",
+    "bluebird": "^3.7.2",
+    "moment": "^2.29.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.21.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.22.1"
+  }
 }
