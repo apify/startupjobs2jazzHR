@@ -54,7 +54,7 @@ class JazzHRClient {
       const detail = await this.applicant(id);
 
       return detail;
-    }, { concurrency: 50 });
+    }, { concurrency: 30 });
 
     return res;
   }
