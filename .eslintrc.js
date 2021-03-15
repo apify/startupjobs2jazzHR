@@ -12,5 +12,8 @@ module.exports = {
   },
   rules: {
     'max-len': ['error', { code: 150 }],
+    camelcase: 0,
+    'no-param-reassign': 0,
+    'no-underscore-dangle': 0,
   },
 };
