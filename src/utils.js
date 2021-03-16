@@ -1,11 +1,24 @@
 const moment = require('moment');
 
+/**
+ * Prefix for jazzHR note containing startupJobs candidate id
+ */
 const STARTUP_JOBS_ID_PREFIX = 'startupJobsId: ';
 
-function stringToKey(title) {
-  return title.trim().replace(/\s+/g, '-').toLowerCase();
+/**
+ * Trims, lowercases and dashcase given string
+ * @param {string} title
+ * @returns {string} formated string
+ */
+function stringToKey(str) {
+  return str.trim().replace(/\s+/g, '-').toLowerCase();
 }
 
+/**
+ * Gets startupjobs candidate id from jazzHR comments
+ * @param {array} comments
+ * @returns {string} startupjobs candidate id
+ */
 function getStartupJobsIdFromComments(comments = []) {
   if (!Array.isArray(comments)) comments = [comments];
   const commentWithId = comments
@@ -15,7 +28,13 @@ function getStartupJobsIdFromComments(comments = []) {
   return commentWithId.replace(STARTUP_JOBS_ID_PREFIX, '');
 }
 
-function dissectStartupJobsApplication(application, jobId) {
+/**
+ * Transform startupjobs application for further processing
+ * @param {object} application from startupjobs
+ * @param {string} jobId from jazzHR
+ * @returns {object} with jazzHR format application, jazzHR notes, resumeUrl
+ */
+function transformStartupJobsApplication(application, jobId) {
   const {
     name,
     email,
@@ -68,7 +87,7 @@ function dissectStartupJobsApplication(application, jobId) {
 }
 
 module.exports = {
-  dissectStartupJobsApplication,
+  transformStartupJobsApplication,
   getStartupJobsIdFromComments,
   stringToKey,
 };
