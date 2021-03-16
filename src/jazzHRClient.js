@@ -1,5 +1,5 @@
 const Promise = require('bluebird');
-const { api } = require('./api');
+const api = require('./api');
 
 class JazzHRClient {
   constructor(token) {
@@ -26,14 +26,6 @@ class JazzHRClient {
 
   async jobList() {
     const { data } = await api.get(`${this.url}/jobs`, this.getConfig());
-    return data;
-  }
-
-  async applicantList(page = 1) {
-    let { data } = await api.get(`${this.url}/applicants/page/${page}`, this.getConfig());
-    if (data.length > 0) {
-      data = [...data, ...await this.applicantList(page + 1)];
-    }
     return data;
   }
 
@@ -74,4 +66,4 @@ class JazzHRClient {
   }
 }
 
-exports.JazzHRClient = JazzHRClient;
+module.exports = JazzHRClient;

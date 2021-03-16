@@ -1,10 +1,11 @@
 const axios = require('axios');
+const _ = require('underscore');
 
 const api = axios.create();
 
 api.interceptors.request.use((request) => {
   console.log('Starting Request', request.url);
-  if (request.method === 'post') console.log(request.data);
+  if (request.method === 'post') console.log(_.omit(request.data, 'apikey', 'base64-resume'));
   return request;
 });
 
@@ -21,4 +22,4 @@ api.interceptors.response.use(
   },
 );
 
-exports.api = api;
+module.exports = api;
