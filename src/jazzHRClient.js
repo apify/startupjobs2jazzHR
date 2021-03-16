@@ -1,5 +1,6 @@
 const Promise = require('bluebird');
 const api = require('./api');
+const { ERROR_TYPES } = require('./utils');
 
 /**
  * Class wrapping jazzHr endpoints
@@ -90,6 +91,14 @@ class JazzHRClient {
    */
   async createApplicant(applicant) {
     const { data } = await api.post(`${this.url}/applicants`, this.postConfig(applicant));
+    if (data._error) {
+      const error = {
+        type: ERROR_TYPES.CREATE_APPLICANT,
+        payload: applicant,
+        message: data._error,
+      };
+      throw new Error(JSON.stringify(error));
+    }
     return data.prospect_id;
   }
 
@@ -99,12 +108,21 @@ class JazzHRClient {
    * @param {string} contents
    */
   async createNote(applicant_id, contents) {
-    await api.post(`${this.url}/notes`, this.postConfig({
+    const payload = {
       applicant_id,
       contents,
       user_id: 'usr_anonymous',
       security: 1,
-    }));
+    };
+    const { data } = await api.post(`${this.url}/notes`, this.postConfig(payload));
+    if (data._error) {
+      const error = {
+        type: ERROR_TYPES.CREATE_NOTE,
+        message: data._error,
+        payload,
+      };
+      throw new Error(JSON.stringify(error));
+    }
   }
 }
 

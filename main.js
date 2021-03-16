@@ -11,26 +11,37 @@ Apify.main(async () => {
   const input = await Apify.getInput();
   const { startupJobsToken, jazzHRToken } = input;
   // Open a named dataset
-  const dataset = await Apify.openDataset('EXISTING_APPLICATIONS');
+  const dataset = await Apify.openDataset('RECORDS');
   const store = await Apify.openKeyValueStore('state');
   const lastApplication = await store.getValue('LAST_APPLICATION') || {};
-  // Initialize api clients
-  const worker = await Worker.build(startupJobsToken, jazzHRToken);
-  try {
-    const { items: records } = await dataset.getData();
-    const newRecords = await worker.getNewRecords(records);
-    await dataset.pushData(newRecords);
-    const { items: updatedRecords } = await dataset.getData();
-    const newApplications = await worker.getNewApplications(updatedRecords, lastApplication);
-    await worker.postNewApplications(newApplications);
+  const unresolvedErrors = await store.getValue('UNRESOLVED_ERRORS') || [];
 
-    // Update last application
+  const worker = await Worker.create(startupJobsToken, jazzHRToken);
+  const { items: stateRecords } = await dataset.getData();
+
+  try {
+    // Initialize values from state
+    const initialRecords = await worker.getNewRecords(stateRecords);
+    await dataset.pushData(initialRecords);
+    const { items: initializedRecords } = await dataset.getData();
+
+    // Get new startupjobs application
+    const newApplications = await worker.getNewApplications(initializedRecords, lastApplication);
+
+    // Post to jazzHR
+    const remainingErrors = await worker.resolveErrors(unresolvedErrors);
+    const newErrors = await worker.postNewApplications(newApplications);
+
+    // Update state
+    const newRecords = await worker.getNewRecords(initializedRecords);
+    await dataset.pushData(newRecords);
+    await store.setValue('UNRESOLVED_ERRORS', [...remainingErrors, ...newErrors]);
     if (newApplications.length > 0) await store.setValue('LAST_APPLICATION', newApplications[0]);
 
     const stats = {
-      allRecords: updatedRecords.length,
-      newRecords: newRecords.length,
-      postableApplicants: newApplications.length,
+      totalRecords: initializedRecords.length + newRecords.length,
+      postedApplications: newApplications.length,
+      unresolvedErrors: remainingErrors.length + newErrors.length,
     };
     console.log('Stats: ', stats);
   } catch (err) {

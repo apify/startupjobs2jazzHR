@@ -9,7 +9,7 @@ class StartupJobsClient {
   constructor(token) {
     this.token = token;
     this.url = 'https://api.startupjobs.cz/company';
-    this.dateFormat = 'YYYY-MM-DDThh:mm:ss';
+    this.dateFormat = 'YYYY-MM-DDTHH:mm:ss';
   }
 
   /**
@@ -33,9 +33,12 @@ class StartupJobsClient {
    * @returns {array} applications
    */
   async applicationList(from) {
+    if (from && moment(from, this.dateFormat).format(this.dateFormat) !== from) {
+      throw new Error(`Date must be in ${this.dateFormat} format`);
+    }
     const { data } = await api.get(`${this.url}/applications`, this.getConfig({
       params: {
-        'created_at.gt': from ? moment(from).format(this.dateFormat) : null,
+        'created_at.gt': from,
       },
     }));
     return data;
@@ -76,6 +79,7 @@ class StartupJobsClient {
    * @returns {string} base64
    */
   async getBase64Attachment(url) {
+    if (!url) return null;
     const { data } = await api.get(url, this.getConfig({
       responseType: 'arrayBuffer',
       responseEncoding: 'binary',

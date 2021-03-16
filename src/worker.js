@@ -2,12 +2,13 @@ const Promise = require('bluebird');
 const JazzHRClient = require('./jazzHRClient');
 const StartupJobsClient = require('./startupJobsClient');
 const {
-  stringToKey, getStartupJobsIdFromComments, transformStartupJobsApplication,
+  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, ERROR_TYPES,
 } = require('./utils');
 
 /**
  * Worker should not be instantiated via contructor but via build method
- *
+ * Contains methods used in Apify.main
+ * Uses startupJobs and jazzHR clients
  */
 class Worker {
   constructor(startupJobs, jazzHR, appliableJobs) {
@@ -22,7 +23,7 @@ class Worker {
    * @param {string} jazzHrToken
    * @returns {Worker} instance
    */
-  static async build(startupJobsToken, jazzHrToken) {
+  static async create(startupJobsToken, jazzHrToken) {
     const startupJobs = new StartupJobsClient(startupJobsToken);
     const jazzHR = new JazzHRClient(jazzHrToken);
     const jobs = await jazzHR.jobList();
@@ -33,6 +34,26 @@ class Worker {
         return acc;
       }, {});
     return new Worker(startupJobs, jazzHR, appliableJobs);
+  }
+
+  async resolveErrors(unresolvedErrors) {
+    const remainingErrors = await Promise.map(unresolvedErrors, async (error) => {
+      let resolve;
+      switch (error.type) {
+        case ERROR_TYPES.CREATE_APPLICANT: {
+          resolve = await this.postNewApplications(error.payload);
+          break;
+        }
+        case ERROR_TYPES.CREATE_NOTE:
+        default: {
+          resolve = await this.jazzHR.createNote(error.payload.applicant_id, error.payload.contents);
+          break;
+        }
+      }
+      return resolve;
+    });
+
+    return remainingErrors;
   }
 
   /**
@@ -69,7 +90,7 @@ class Worker {
         applyDate: details.apply_date,
         email: stringToKey(details.email),
         jobKey: this.appliableJobs[record.job_id],
-        startupJobsApplicationId: getStartupJobsIdFromComments(details.comments),
+        source: details.source,
         jazzHrApplicationId: record.applicant_id,
       };
     });
@@ -87,7 +108,7 @@ class Worker {
     const applicationsWithDetails = await this.startupJobs.applicationsWithDetails(applications
       .filter((application) => application.id !== lastApplication.id)
       .filter((application) => !!application.offer)
-      .filter((application) => !records.find((record) => record.startupJobsId === application.id))
+      .filter((application) => !records.find((record) => parseStartupJobsIdFromJazzHR(record.source) === application.id))
       .filter((application) => Object.values(this.appliableJobs).includes(stringToKey(application.offer.names[0].name)))
       .map((application) => application.id));
 
@@ -99,24 +120,36 @@ class Worker {
    * @param {array} applications
    */
   async postNewApplications(applications) {
-    await Promise.map(applications, async (application) => {
+    const possibleErrors = await Promise.map(applications, async (application) => {
+      const applicationTransformer = new ApplicationTransformer(application);
+
       const jobKey = stringToKey(application.offer.name[0].name);
-      const jobId = Object.keys(this.appliableJobs).find((id) => this.appliableJobs[id] === jobKey);
-      const {
-        jazzHrApplication, notes, resumeUrl,
-      } = transformStartupJobsApplication(application, jobId);
+      const jobId = Object.keys(this.appliableJobs).find((key) => this.appliableJobs[key] === jobKey);
 
-      if (resumeUrl) {
-        const base64Resume = await this.startupJobs.getBase64Attachment(resumeUrl);
-        jazzHrApplication['base64-resume'] = base64Resume;
+      const resumeUrl = applicationTransformer.buildResumeUrl();
+      // Download resume, turn it to base64 and pass it to jazzHR
+      const base64Resume = await this.startupJobs.getBase64Attachment(resumeUrl);
+
+      const jazzHrApplication = applicationTransformer.buildApplicationPayload(jobId, base64Resume);
+      let resolve;
+      try {
+        const jazzHrId = await this.jazzHR.createApplicant(jazzHrApplication);
+
+        // Make sure the jazzHR application is created
+        await Promise.delay(2000);
+
+        // Create notes to the application (containes notes from startupjobs, attachment links if multiple or not a document, starupjobs ID)
+        await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {
+          await this.jazzHR.createNote(jazzHrId, note);
+        });
+      } catch (err) {
+        console.log(err.message);
+        resolve = JSON.parse(err.message);
       }
-      const jazzHrId = await this.jazzHR.createApplicant(jazzHrApplication);
-
-      await Promise.delay(2000);
-      await Promise.map(notes, async (note) => {
-        await this.jazzHR.createNote(jazzHrId, note);
-      });
+      return resolve;
     }, { concurrency: 10 });
+
+    return possibleErrors.filter((error) => !!error);
   }
 }
 

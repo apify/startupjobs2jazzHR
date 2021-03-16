@@ -4,11 +4,15 @@ const _ = require('underscore');
 const api = axios.create();
 
 api.interceptors.request.use((request) => {
-  console.log('Starting Request', request.url);
-  if (request.method === 'post') console.log(_.omit(request.data, 'apikey', 'base64-resume'));
+  console.log(request.method.toUpperCase(), request.url);
+  if (request.method === 'post') console.log(JSON.stringify(_.omit(request.data, 'apikey', 'base64-resume')));
   return request;
 });
 
+/**
+ * Throws errors to client to stop the actor run
+ * Next schedule run will retry where it left off
+ */
 api.interceptors.response.use(
   (res) => {
     // jazzHR posts
