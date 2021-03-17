@@ -1,7 +1,7 @@
 {
   "name": "startupjobs2jazzhr",
   "version": "1.0.0",
-  "description": "Add new applications from startupjobs to jazzHR",
+  "description": "This actor transfers new applications from startupjobs, that are connected to the job offer that exists in jazzHR and puts them into jazzHR.",
   "main": "main.js",
   "scripts": {
     "start": "node main.js",
