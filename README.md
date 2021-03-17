@@ -7,7 +7,7 @@ To pair startupjobs with jazzHR simply have their names equal.
 This actor is build on [startupjobs api](https://www.startupjobs.cz/dev/public-api) and [jazzHR api](http://www.resumatorapi.com/v1/)
 ## Process overview
 1. Initialize state based on which the actor will filter transferable applications (state loaded from dataset and from jazzHR)
-2. Gets new startupjobs applications and filters them
+2. Gets new startupjobs applications and filters them by following conditions:
     1. Application was not posted before, which is determined by comparing with the state
     2. Application is connected to the job offer, that is listed on jazzHR as well. Decides based on jazzHR and startupjobs offer name equality
 3. Tries to resolve POST errors from previous runs if any
