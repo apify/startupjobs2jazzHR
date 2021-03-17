@@ -36,7 +36,12 @@ class Worker {
     return new Worker(startupJobs, jazzHR, appliableJobs);
   }
 
-  async resolveErrors(unresolvedErrors) {
+  /**
+   * Tries to resolve POST errors from previous runs
+   * @param {array} unresolvedErrors
+   * @returns {array} remaining POST errors
+   */
+  async resolvePostErrors(unresolvedErrors) {
     const remainingErrors = await Promise.map(unresolvedErrors, async (error) => {
       let resolve;
       switch (error.type) {

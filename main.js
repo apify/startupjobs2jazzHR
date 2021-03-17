@@ -26,22 +26,22 @@ Apify.main(async () => {
     const { items: initializedRecords } = await dataset.getData();
 
     // Get new startupjobs application
-    const newApplications = await worker.getNewApplications(initializedRecords, lastApplication);
+    const postable = await worker.getNewApplications(initializedRecords, lastApplication);
 
     // Post to jazzHR
-    const remainingErrors = await worker.resolveErrors(unresolvedErrors);
-    const newErrors = await worker.postNewApplications(newApplications);
+    const remainingPostErrors = await worker.resolvePostErrors(unresolvedErrors);
+    const newPostErrors = await worker.postNewApplications(postable);
 
     // Update state
     const newRecords = await worker.getNewRecords(initializedRecords);
     await dataset.pushData(newRecords);
-    await store.setValue('UNRESOLVED_ERRORS', [...remainingErrors, ...newErrors]);
-    if (newApplications.length > 0) await store.setValue('LAST_APPLICATION', newApplications[0]);
+    await store.setValue('UNRESOLVED_ERRORS', [...remainingPostErrors, ...newPostErrors]);
+    if (postable.length > 0) await store.setValue('LAST_APPLICATION', postable[0]);
 
     const stats = {
       totalRecords: initializedRecords.length + newRecords.length,
-      postedApplications: newApplications.length,
-      unresolvedErrors: remainingErrors.length + newErrors.length,
+      postableApplications: postable.length,
+      unresolvedErrors: remainingPostErrors.length + newPostErrors.length,
     };
     console.log('Stats: ', stats);
   } catch (err) {
