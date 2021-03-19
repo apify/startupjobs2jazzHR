@@ -2,8 +2,9 @@ const Promise = require('bluebird');
 const JazzHRClient = require('./jazzHRClient');
 const StartupJobsClient = require('./startupJobsClient');
 const {
-  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, ERROR_TYPES,
+  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, sleep,
 } = require('./utils');
+const { ERROR_TYPES } = require('./consts');
 
 /**
  * Worker should not be instantiated via contructor but via build method
@@ -140,7 +141,7 @@ class Worker {
         const jazzHrId = await this.jazzHR.createApplicant(jazzHrApplication);
 
         // Make sure the jazzHR application is created
-        await Promise.delay(2000);
+        await sleep(2000);
 
         // Create notes to the application (containes notes from startupjobs, attachment links if multiple or not a document, starupjobs ID)
         await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {

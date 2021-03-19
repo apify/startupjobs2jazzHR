@@ -1,7 +1,8 @@
 const moment = require('moment');
-const { htmlToText } = require('html-to-text');
+const { utils: apifyUtils } = require('apify');
 const { STARTUP_JOBS_ID_PREFIX } = require('./consts');
 
+const { htmlToText, sleep } = apifyUtils;
 /**
  * Trims, lowercases and dashcase given string
  * @param {string} title
@@ -47,9 +48,7 @@ class ApplicationTransformer {
       apply_date: moment(created_at).format('YYYY-MM-DD'),
       phone,
       linkedin: linkedin.url,
-      coverletter: htmlToText(text, {
-        wordwrap: null,
-      }),
+      coverletter: htmlToText(text),
       job: jobId,
       source: STARTUP_JOBS_ID_PREFIX + id,
     };
@@ -114,4 +113,6 @@ module.exports = {
   splitFullname,
   ApplicationTransformer,
   parseStartupJobsIdFromJazzHR,
+  htmlToText,
+  sleep,
 };
