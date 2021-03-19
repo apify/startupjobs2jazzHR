@@ -46,5 +46,6 @@ Apify.main(async () => {
     console.log('Stats: ', stats);
   } catch (err) {
     console.error(err);
+    throw err;
   }
 });
