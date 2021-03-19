@@ -1,6 +1,6 @@
 const Promise = require('bluebird');
 const api = require('./api');
-const { ERROR_TYPES } = require('./utils');
+const { ERROR_TYPES } = require('./consts');
 
 /**
  * Class wrapping jazzHr endpoints

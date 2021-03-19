@@ -1,5 +1,6 @@
 const moment = require('moment');
 const { htmlToText } = require('html-to-text');
+const { STARTUP_JOBS_ID_PREFIX } = require('./consts');
 
 /**
  * Trims, lowercases and dashcase given string
@@ -22,8 +23,6 @@ function splitFullname(name) {
     last_name: restOfName.join(' ') || '[NO LAST NAME PROVIDED]',
   };
 }
-
-const STARTUP_JOBS_ID_PREFIX = 'Actor/Startupjobs - ';
 
 class ApplicationTransformer {
   constructor(application) {
@@ -110,15 +109,9 @@ function parseStartupJobsIdFromJazzHR(source) {
   return source.replace(STARTUP_JOBS_ID_PREFIX, '');
 }
 
-const ERROR_TYPES = {
-  CREATE_APPLICANT: 'CREATE_APPLICANT',
-  CREATE_NOTE: 'CREATE_NOTE',
-};
-
 module.exports = {
   stringToKey,
   splitFullname,
   ApplicationTransformer,
   parseStartupJobsIdFromJazzHR,
-  ERROR_TYPES,
 };
