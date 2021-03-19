@@ -12,7 +12,7 @@ Apify.main(async () => {
   const { startupJobsToken, jazzHRToken } = input;
   // Open a named dataset
   const dataset = await Apify.openDataset('RECORDS');
-  const store = await Apify.openKeyValueStore('state');
+  const store = await Apify.openKeyValueStore('prev_transfer_info');
   const lastApplication = await store.getValue('LAST_APPLICATION') || {};
   const unresolvedErrors = await store.getValue('UNRESOLVED_ERRORS') || [];
 
