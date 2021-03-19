@@ -5,6 +5,7 @@
 // Import Apify SDK. For more information, see https://sdk.apify.com/
 const Apify = require('apify');
 const Worker = require('./src/worker');
+const { log } = require('./src/utils');
 
 Apify.main(async () => {
   // Initialize state values
@@ -43,9 +44,9 @@ Apify.main(async () => {
       postableApplications: postable.length,
       unresolvedErrors: remainingPostErrors.length + newPostErrors.length,
     };
-    console.log('Stats: ', stats);
+    log.info('Stats', stats);
   } catch (err) {
-    console.error(err);
+    log.error(err.name, err);
     throw err;
   }
 });
