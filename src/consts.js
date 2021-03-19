@@ -4,7 +4,10 @@ const ERROR_TYPES = {
   CREATE_NOTE: 'CREATE_NOTE',
 };
 
+const JAZZ_HR_RESOLVABLE_POST_ERROR = 'JazzHR resolvable POST error';
+
 module.exports = {
   STARTUP_JOBS_ID_PREFIX,
   ERROR_TYPES,
+  JAZZ_HR_RESOLVABLE_POST_ERROR,
 };

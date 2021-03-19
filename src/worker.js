@@ -2,9 +2,9 @@ const Promise = require('bluebird');
 const JazzHRClient = require('./jazzHRClient');
 const StartupJobsClient = require('./startupJobsClient');
 const {
-  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, sleep,
+  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, sleep, log,
 } = require('./utils');
-const { ERROR_TYPES } = require('./consts');
+const { ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR } = require('./consts');
 
 /**
  * Worker should not be instantiated via contructor but via build method
@@ -148,8 +148,11 @@ class Worker {
           await this.jazzHR.createNote(jazzHrId, note);
         });
       } catch (err) {
-        console.log(err.message);
-        resolve = JSON.parse(err.message);
+        if (err.name === JAZZ_HR_RESOLVABLE_ERROR) {
+          const errorData = JSON.parse(err.message);
+          log.error('Failed to POST to jazzHR. Saved the request so it might be resolved in the next actor run', errorData);
+          resolve = errorData;
+        }
       }
       return resolve;
     }, { concurrency: 10 });

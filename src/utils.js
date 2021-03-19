@@ -2,7 +2,7 @@ const moment = require('moment');
 const { utils: apifyUtils } = require('apify');
 const { STARTUP_JOBS_ID_PREFIX } = require('./consts');
 
-const { htmlToText, sleep } = apifyUtils;
+const { htmlToText, sleep, log } = apifyUtils;
 /**
  * Trims, lowercases and dashcase given string
  * @param {string} title
@@ -100,8 +100,8 @@ class ApplicationTransformer {
 }
 
 /**
- * Gets startupjobs candidate id from jazzHR comments
- * @param {array} comments
+ * Gets startupjobs candidate id from jazzHR source
+ * @param {object} source
  * @returns {string} startupjobs candidate id
  */
 function parseStartupJobsIdFromJazzHR(source) {
@@ -115,4 +115,5 @@ module.exports = {
   parseStartupJobsIdFromJazzHR,
   htmlToText,
   sleep,
+  log,
 };

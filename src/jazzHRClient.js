@@ -1,6 +1,6 @@
 const Promise = require('bluebird');
 const api = require('./api');
-const { ERROR_TYPES } = require('./consts');
+const { ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR } = require('./consts');
 
 /**
  * Class wrapping jazzHr endpoints
@@ -92,12 +92,14 @@ class JazzHRClient {
   async createApplicant(applicant) {
     const { data } = await api.post(`${this.url}/applicants`, this.postConfig(applicant));
     if (data._error) {
-      const error = {
+      const errorData = {
         type: ERROR_TYPES.CREATE_APPLICANT,
         payload: applicant,
         message: data._error,
       };
-      throw new Error(JSON.stringify(error));
+      const error = new Error(JSON.stringify(errorData));
+      error.name = JAZZ_HR_RESOLVABLE_ERROR;
+      throw error;
     }
     return data.prospect_id;
   }
@@ -116,12 +118,14 @@ class JazzHRClient {
     };
     const { data } = await api.post(`${this.url}/notes`, this.postConfig(payload));
     if (data._error) {
-      const error = {
+      const errorData = {
         type: ERROR_TYPES.CREATE_NOTE,
         message: data._error,
         payload,
       };
-      throw new Error(JSON.stringify(error));
+      const error = new Error(JSON.stringify(errorData));
+      error.name = JAZZ_HR_RESOLVABLE_ERROR;
+      throw error;
     }
   }
 }
