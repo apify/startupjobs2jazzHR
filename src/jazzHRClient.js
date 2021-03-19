@@ -1,6 +1,8 @@
 const Promise = require('bluebird');
 const api = require('./api');
-const { ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR } = require('./consts');
+const {
+  ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR, JAZZ_HR_GET_APPLICANTS_CONCURRENCY,
+} = require('./consts');
 
 /**
  * Class wrapping jazzHr endpoints
@@ -79,7 +81,7 @@ class JazzHRClient {
     const res = await Promise.map(applicantIds, async (id) => {
       const detail = await this.applicantDetail(id);
       return detail;
-    }, { concurrency: 30 });
+    }, { concurrency: JAZZ_HR_GET_APPLICANTS_CONCURRENCY });
 
     return res;
   }

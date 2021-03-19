@@ -4,7 +4,9 @@ const StartupJobsClient = require('./startupJobsClient');
 const {
   stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, sleep, log,
 } = require('./utils');
-const { ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR } = require('./consts');
+const {
+  ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR, SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY,
+} = require('./consts');
 
 /**
  * Worker should not be instantiated via contructor but via build method
@@ -141,7 +143,7 @@ class Worker {
         const jazzHrId = await this.jazzHR.createApplicant(jazzHrApplication);
 
         // Make sure the jazzHR application is created
-        await sleep(2000);
+        await sleep(SLEEP_AFTER_TRANSFER);
 
         // Create notes to the application (containes notes from startupjobs, attachment links if multiple or not a document, starupjobs ID)
         await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {
@@ -155,7 +157,7 @@ class Worker {
         }
       }
       return resolve;
-    }, { concurrency: 10 });
+    }, { concurrency: TRANSFER_APPLICATIONS_CONCURRENCY });
 
     return possibleErrors.filter((error) => !!error);
   }
