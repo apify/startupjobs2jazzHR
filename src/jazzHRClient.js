@@ -66,7 +66,7 @@ class JazzHRClient {
    */
   async applicants2JobsList(page = 1) {
     let { data } = await api.get(`${this.url}/applicants2jobs/page/${page}`, this.getConfig());
-    if (data.length > 0) {
+    if (data.length) {
       data = [...data, ...await this.applicants2JobsList(page + 1)];
     }
     return data;

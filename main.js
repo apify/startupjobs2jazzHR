@@ -44,7 +44,7 @@ Apify.main(async () => {
     const newRecords = await worker.getNewRecords(initializedRecords);
     await dataset.pushData(newRecords);
     await store.setValue('RESOLVABLE_ERRORS', remainingPostErrors);
-    if (postable.length > 0) [lastApplication] = postable;
+    if (postable.length) [lastApplication] = postable;
     await store.setValue('LAST_APPLICATION', lastApplication);
 
     // Log run stats
