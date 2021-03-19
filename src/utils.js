@@ -108,6 +108,15 @@ function parseStartupJobsIdFromJazzHR(source) {
   return source.replace(STARTUP_JOBS_ID_PREFIX, '');
 }
 
+/**
+ * Accepts buffer and turns it into a string in bas64
+ * @param {ArrayBuffer} buffer
+ * @returns {string} in base64
+ */
+function bufferToBase64(buffer) {
+  return Buffer.from(buffer, 'binary').toString('base64');
+}
+
 module.exports = {
   stringToKey,
   splitFullname,
@@ -116,4 +125,5 @@ module.exports = {
   htmlToText,
   sleep,
   log,
+  bufferToBase64,
 };

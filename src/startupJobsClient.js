@@ -2,6 +2,7 @@ const moment = require('moment');
 const Promise = require('bluebird');
 const api = require('./api');
 const { STARTUP_JOBS_GET_APPLICATIONS_CONCURRENCY } = require('./consts');
+const { bufferToBase64 } = require('./utils');
 
 /**
  * StartupJobs endpointes wrapper
@@ -86,7 +87,7 @@ class StartupJobsClient {
       responseEncoding: 'binary',
     }));
 
-    return Buffer.from(data, 'binary').toString('base64');
+    return bufferToBase64(data);
   }
 }
 
