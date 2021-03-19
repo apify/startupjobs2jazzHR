@@ -6,6 +6,7 @@
 const Apify = require('apify');
 const Worker = require('./src/worker');
 const { log } = require('./src/utils');
+const { ERROR_TYPES } = require('./src/consts');
 
 Apify.main(async () => {
   // Initialize state values
@@ -14,37 +15,45 @@ Apify.main(async () => {
   // Open a named dataset
   const dataset = await Apify.openDataset('RECORDS');
   const store = await Apify.openKeyValueStore('prev_transfer_info');
-  const lastApplication = await store.getValue('LAST_APPLICATION') || {};
-  const unresolvedErrors = await store.getValue('UNRESOLVED_ERRORS') || [];
+  let lastApplication = await store.getValue('LAST_APPLICATION') || {};
+  const resolvableErrors = await store.getValue('RESOLVABLE_ERRORS') || [];
 
   const worker = await Worker.create(startupJobsToken, jazzHRToken);
   const { items: stateRecords } = await dataset.getData();
 
   try {
     // Initialize values from state
+    log.info('Initiate state');
     const initialRecords = await worker.getNewRecords(stateRecords);
     await dataset.pushData(initialRecords);
     const { items: initializedRecords } = await dataset.getData();
 
     // Get new startupjobs application
+    log.info('Get startupjobs applications');
     const postable = await worker.getNewApplications(initializedRecords, lastApplication);
 
     // Post to jazzHR
-    const remainingPostErrors = await worker.resolvePostErrors(unresolvedErrors);
+    log.info('Transfering applications', { total: postable.length, applications: postable });
     const newPostErrors = await worker.postNewApplications(postable);
+    const allResolvableErrors = [...resolvableErrors, ...newPostErrors];
+    log.info('Retrying resolvable errors from this and previous run', { total: allResolvableErrors.length, errors: allResolvableErrors });
+    const remainingPostErrors = await worker.resolvePostErrors(allResolvableErrors);
 
     // Update state
+    log.info('Updating actor state for next runs');
     const newRecords = await worker.getNewRecords(initializedRecords);
     await dataset.pushData(newRecords);
-    await store.setValue('UNRESOLVED_ERRORS', [...remainingPostErrors, ...newPostErrors]);
-    if (postable.length > 0) await store.setValue('LAST_APPLICATION', postable[0]);
+    await store.setValue('RESOLVABLE_ERRORS', remainingPostErrors);
+    if (postable.length > 0) [lastApplication] = postable;
+    await store.setValue('LAST_APPLICATION', lastApplication);
 
-    const stats = {
-      totalRecords: initializedRecords.length + newRecords.length,
-      postableApplications: postable.length,
-      unresolvedErrors: remainingPostErrors.length + newPostErrors.length,
-    };
-    log.info('Stats', stats);
+    // Log run stats
+    log.info('Current run stats', {
+      recordsTotal: initializedRecords.length + newRecords.length,
+      lastApplication,
+      postedTotal: postable.length - newPostErrors.filter((error) => error.type === ERROR_TYPES.CREATE_APPLICANT).length,
+      remainingResolvableErrorsTotal: remainingPostErrors.length,
+    });
   } catch (err) {
     log.error(err.name, err);
     throw err;
