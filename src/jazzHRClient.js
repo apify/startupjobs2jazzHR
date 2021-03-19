@@ -39,11 +39,11 @@ class JazzHRClient {
   }
 
   /**
-   * Return jobs from jazzHR
+   * Return open jobs from jazzHR
    * @returns {array} job list
    */
-  async jobList() {
-    const { data } = await api.get(`${this.url}/jobs`, this.getConfig());
+  async openJobList() {
+    const { data } = await api.get(`${this.url}/jobs/status/open`, this.getConfig());
     return data;
   }
 

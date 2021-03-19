@@ -26,9 +26,8 @@ class Worker {
   static async create(startupJobsToken, jazzHrToken) {
     const startupJobs = new StartupJobsClient(startupJobsToken);
     const jazzHR = new JazzHRClient(jazzHrToken);
-    const jobs = await jazzHR.jobList();
+    const jobs = await jazzHR.openJobList();
     const appliableJobs = jobs
-      .filter((job) => job.status === 'Open')
       .reduce((acc, job) => {
         acc[job.id] = stringToKey(job.title);
         return acc;

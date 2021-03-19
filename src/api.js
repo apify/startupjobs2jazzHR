@@ -21,9 +21,6 @@ api.interceptors.response.use(
     }
     return res;
   },
-  (err) => {
-    throw new Error(err.response.data.message);
-  },
 );
 
 module.exports = api;
