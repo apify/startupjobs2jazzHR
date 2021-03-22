@@ -1,6 +1,8 @@
 const Promise = require('bluebird');
 const api = require('./api');
-const { ERROR_TYPES } = require('./utils');
+const {
+  ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR, JAZZ_HR_GET_APPLICANTS_CONCURRENCY,
+} = require('./consts');
 
 /**
  * Class wrapping jazzHr endpoints
@@ -39,11 +41,11 @@ class JazzHRClient {
   }
 
   /**
-   * Return jobs from jazzHR
+   * Return open jobs from jazzHR
    * @returns {array} job list
    */
-  async jobList() {
-    const { data } = await api.get(`${this.url}/jobs`, this.getConfig());
+  async openJobList() {
+    const { data } = await api.get(`${this.url}/jobs/status/open`, this.getConfig());
     return data;
   }
 
@@ -64,7 +66,7 @@ class JazzHRClient {
    */
   async applicants2JobsList(page = 1) {
     let { data } = await api.get(`${this.url}/applicants2jobs/page/${page}`, this.getConfig());
-    if (data.length > 0) {
+    if (data.length) {
       data = [...data, ...await this.applicants2JobsList(page + 1)];
     }
     return data;
@@ -79,7 +81,7 @@ class JazzHRClient {
     const res = await Promise.map(applicantIds, async (id) => {
       const detail = await this.applicantDetail(id);
       return detail;
-    }, { concurrency: 30 });
+    }, { concurrency: JAZZ_HR_GET_APPLICANTS_CONCURRENCY });
 
     return res;
   }
@@ -92,12 +94,14 @@ class JazzHRClient {
   async createApplicant(applicant) {
     const { data } = await api.post(`${this.url}/applicants`, this.postConfig(applicant));
     if (data._error) {
-      const error = {
+      const errorData = {
         type: ERROR_TYPES.CREATE_APPLICANT,
         payload: applicant,
         message: data._error,
       };
-      throw new Error(JSON.stringify(error));
+      const error = new Error(JSON.stringify(errorData));
+      error.name = JAZZ_HR_RESOLVABLE_ERROR;
+      throw error;
     }
     return data.prospect_id;
   }
@@ -116,12 +120,14 @@ class JazzHRClient {
     };
     const { data } = await api.post(`${this.url}/notes`, this.postConfig(payload));
     if (data._error) {
-      const error = {
+      const errorData = {
         type: ERROR_TYPES.CREATE_NOTE,
         message: data._error,
         payload,
       };
-      throw new Error(JSON.stringify(error));
+      const error = new Error(JSON.stringify(errorData));
+      error.name = JAZZ_HR_RESOLVABLE_ERROR;
+      throw error;
     }
   }
 }

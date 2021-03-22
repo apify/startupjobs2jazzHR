@@ -1,6 +1,8 @@
 const moment = require('moment');
 const Promise = require('bluebird');
 const api = require('./api');
+const { STARTUP_JOBS_GET_APPLICATIONS_CONCURRENCY } = require('./consts');
+const { bufferToBase64 } = require('./utils');
 
 /**
  * StartupJobs endpointes wrapper
@@ -53,7 +55,7 @@ class StartupJobsClient {
     const res = await Promise.map(applicationIds, async (id) => {
       const detail = await this.applicationDetail(id);
       return detail;
-    }, { concurrency: 20 });
+    }, { concurrency: STARTUP_JOBS_GET_APPLICATIONS_CONCURRENCY });
 
     return res.sort((a, b) => {
       const aDate = moment(a.created_at, this.dateFormat);
@@ -85,7 +87,7 @@ class StartupJobsClient {
       responseEncoding: 'binary',
     }));
 
-    return Buffer.from(data, 'binary').toString('base64');
+    return bufferToBase64(data);
   }
 }
 

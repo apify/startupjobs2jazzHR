@@ -2,8 +2,11 @@ const Promise = require('bluebird');
 const JazzHRClient = require('./jazzHRClient');
 const StartupJobsClient = require('./startupJobsClient');
 const {
-  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, ERROR_TYPES,
+  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, sleep, log,
 } = require('./utils');
+const {
+  ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR, SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY,
+} = require('./consts');
 
 /**
  * Worker should not be instantiated via contructor but via build method
@@ -26,9 +29,8 @@ class Worker {
   static async create(startupJobsToken, jazzHrToken) {
     const startupJobs = new StartupJobsClient(startupJobsToken);
     const jazzHR = new JazzHRClient(jazzHrToken);
-    const jobs = await jazzHR.jobList();
+    const jobs = await jazzHR.openJobList();
     const appliableJobs = jobs
-      .filter((job) => job.status === 'Open')
       .reduce((acc, job) => {
         acc[job.id] = stringToKey(job.title);
         return acc;
@@ -141,18 +143,21 @@ class Worker {
         const jazzHrId = await this.jazzHR.createApplicant(jazzHrApplication);
 
         // Make sure the jazzHR application is created
-        await Promise.delay(2000);
+        await sleep(SLEEP_AFTER_TRANSFER);
 
         // Create notes to the application (containes notes from startupjobs, attachment links if multiple or not a document, starupjobs ID)
         await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {
           await this.jazzHR.createNote(jazzHrId, note);
         });
       } catch (err) {
-        console.log(err.message);
-        resolve = JSON.parse(err.message);
+        if (err.name === JAZZ_HR_RESOLVABLE_ERROR) {
+          const errorData = JSON.parse(err.message);
+          log.error('Failed to POST to jazzHR. Saved the request so it might be resolved in the next actor run', errorData);
+          resolve = errorData;
+        }
       }
       return resolve;
-    }, { concurrency: 10 });
+    }, { concurrency: TRANSFER_APPLICATIONS_CONCURRENCY });
 
     return possibleErrors.filter((error) => !!error);
   }

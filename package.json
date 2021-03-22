@@ -27,7 +27,6 @@
     "apify": "^1.0.1",
     "axios": "^0.21.1",
     "bluebird": "^3.7.2",
-    "html-to-text": "^7.0.0",
     "moment": "^2.29.1",
     "underscore": "^1.12.0"
   },

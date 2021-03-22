@@ -1,6 +1,8 @@
 const moment = require('moment');
-const { htmlToText } = require('html-to-text');
+const { utils: apifyUtils } = require('apify');
+const { STARTUP_JOBS_ID_PREFIX } = require('./consts');
 
+const { htmlToText, sleep, log } = apifyUtils;
 /**
  * Trims, lowercases and dashcase given string
  * @param {string} title
@@ -22,8 +24,6 @@ function splitFullname(name) {
     last_name: restOfName.join(' ') || '[NO LAST NAME PROVIDED]',
   };
 }
-
-const STARTUP_JOBS_ID_PREFIX = 'Actor/Startupjobs - ';
 
 class ApplicationTransformer {
   constructor(application) {
@@ -48,9 +48,7 @@ class ApplicationTransformer {
       apply_date: moment(created_at).format('YYYY-MM-DD'),
       phone,
       linkedin: linkedin.url,
-      coverletter: htmlToText(text, {
-        wordwrap: null,
-      }),
+      coverletter: htmlToText(text),
       job: jobId,
       source: STARTUP_JOBS_ID_PREFIX + id,
     };
@@ -102,23 +100,30 @@ class ApplicationTransformer {
 }
 
 /**
- * Gets startupjobs candidate id from jazzHR comments
- * @param {array} comments
+ * Gets startupjobs candidate id from jazzHR source
+ * @param {object} source
  * @returns {string} startupjobs candidate id
  */
 function parseStartupJobsIdFromJazzHR(source) {
   return source.replace(STARTUP_JOBS_ID_PREFIX, '');
 }
 
-const ERROR_TYPES = {
-  CREATE_APPLICANT: 'CREATE_APPLICANT',
-  CREATE_NOTE: 'CREATE_NOTE',
-};
+/**
+ * Accepts buffer and turns it into a string in bas64
+ * @param {ArrayBuffer} buffer
+ * @returns {string} in base64
+ */
+function bufferToBase64(buffer) {
+  return Buffer.from(buffer, 'binary').toString('base64');
+}
 
 module.exports = {
   stringToKey,
   splitFullname,
   ApplicationTransformer,
   parseStartupJobsIdFromJazzHR,
-  ERROR_TYPES,
+  htmlToText,
+  sleep,
+  log,
+  bufferToBase64,
 };
