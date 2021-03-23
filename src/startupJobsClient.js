@@ -34,15 +34,8 @@ class StartupJobsClient {
    * @param {string} from date string
    * @returns {array} applications
    */
-  async applicationList(from) {
-    if (from && moment(from, this.dateFormat).format(this.dateFormat) !== from) {
-      throw new Error(`Date must be in ${this.dateFormat} format`);
-    }
-    const { data } = await api.get(`${this.url}/applications`, this.getConfig({
-      params: {
-        'created_at.gt': from,
-      },
-    }));
+  async applicationList() {
+    const { data } = await api.get(`${this.url}/applications`, this.getConfig());
     return data;
   }
 

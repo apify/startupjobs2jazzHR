@@ -14,8 +14,7 @@ Apify.main(async () => {
   const { startupJobsToken, jazzHRToken } = input;
   // Open a named dataset
   const dataset = await Apify.openDataset('RECORDS');
-  const store = await Apify.openKeyValueStore('prev_transfer_info');
-  let lastApplication = await store.getValue('LAST_APPLICATION') || {};
+  const store = await Apify.openKeyValueStore('prev_transfer');
   const resolvableErrors = await store.getValue('RESOLVABLE_ERRORS') || [];
 
   const worker = await Worker.create(startupJobsToken, jazzHRToken);
@@ -30,7 +29,7 @@ Apify.main(async () => {
 
     // Get new startupjobs application
     log.info('Get startupjobs applications');
-    const postable = await worker.getNewApplications(initializedRecords, lastApplication);
+    const postable = await worker.getNewApplications(initializedRecords);
 
     // Post to jazzHR
     log.info('Transfering applications', { total: postable.length, applications: postable });
@@ -44,13 +43,10 @@ Apify.main(async () => {
     const newRecords = await worker.getNewRecords(initializedRecords);
     await dataset.pushData(newRecords);
     await store.setValue('RESOLVABLE_ERRORS', remainingPostErrors);
-    if (postable.length) [lastApplication] = postable;
-    await store.setValue('LAST_APPLICATION', lastApplication);
 
     // Log run stats
     log.info('Current run stats', {
       recordsTotal: initializedRecords.length + newRecords.length,
-      lastApplication,
       postedTotal: postable.length - newPostErrors.filter((error) => error.type === ERROR_TYPES.CREATE_APPLICANT).length,
       remainingResolvableErrorsTotal: remainingPostErrors.length,
     });
