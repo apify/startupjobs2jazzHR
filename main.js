@@ -6,7 +6,6 @@
 const Apify = require('apify');
 const Worker = require('./src/worker');
 const { log } = require('./src/utils');
-const { ERROR_TYPES } = require('./src/consts');
 
 Apify.main(async () => {
   // Initialize state values
