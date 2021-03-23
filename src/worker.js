@@ -109,11 +109,10 @@ class Worker {
    * @param {object} lastApplication
    * @returns {array} new applications
    */
-  async getNewApplications(records, lastApplication) {
-    const applications = await this.startupJobs.applicationList(lastApplication.created_at);
+  async getNewApplications(records) {
+    const applications = await this.startupJobs.applicationList();
     // Get applications details from startupJobs for those that are applications to jobs listed by jazzHR
     const applicationsWithDetails = await this.startupJobs.applicationsWithDetails(applications
-      .filter((application) => application.id !== lastApplication.id)
       .filter((application) => !!application.offer)
       .filter((application) => !records.find((record) => parseStartupJobsIdFromJazzHR(record.source) === application.id))
       .filter((application) => Object.values(this.appliableJobs).includes(stringToKey(application.offer.names[0].name)))
