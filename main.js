@@ -13,9 +13,9 @@ Apify.main(async () => {
   const input = await Apify.getInput();
   const { startupJobsToken, jazzHRToken } = input;
   // Open a named dataset
-  const dataset = await Apify.openDataset('RECORDS');
-  const store = await Apify.openKeyValueStore('prev_transfer');
-  const resolvableErrors = await store.getValue('RESOLVABLE_ERRORS') || [];
+  const dataset = await Apify.openDataset('records');
+  const store = await Apify.openKeyValueStore('prev-transfer');
+  const resolvableErrors = await store.getValue('resolvable-errors') || [];
 
   const worker = await Worker.create(startupJobsToken, jazzHRToken);
   const { items: stateRecords } = await dataset.getData();
