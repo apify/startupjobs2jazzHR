@@ -1,7 +1,7 @@
 const Promise = require('bluebird');
 const api = require('./api');
 const {
-  ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR, JAZZ_HR_GET_APPLICANTS_CONCURRENCY,
+  ERROR_TYPES, JAZZ_HR_ERROR, JAZZ_HR_GET_APPLICANTS_CONCURRENCY,
 } = require('./consts');
 
 /**
@@ -100,7 +100,7 @@ class JazzHRClient {
         message: data._error,
       };
       const error = new Error(JSON.stringify(errorData));
-      error.name = JAZZ_HR_RESOLVABLE_ERROR;
+      error.name = JAZZ_HR_ERROR;
       throw error;
     }
     return data.prospect_id;
@@ -126,7 +126,7 @@ class JazzHRClient {
         payload,
       };
       const error = new Error(JSON.stringify(errorData));
-      error.name = JAZZ_HR_RESOLVABLE_ERROR;
+      error.name = JAZZ_HR_ERROR;
       throw error;
     }
   }

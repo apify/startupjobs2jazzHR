@@ -2,10 +2,10 @@ const Promise = require('bluebird');
 const JazzHRClient = require('./jazzHRClient');
 const StartupJobsClient = require('./startupJobsClient');
 const {
-  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, sleep, log,
+  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, sleep,
 } = require('./utils');
 const {
-  ERROR_TYPES, JAZZ_HR_RESOLVABLE_ERROR, SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY,
+  SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY,
 } = require('./consts');
 
 /**
@@ -36,31 +36,6 @@ class Worker {
         return acc;
       }, {});
     return new Worker(startupJobs, jazzHR, appliableJobs);
-  }
-
-  /**
-   * Tries to resolve POST errors from previous runs
-   * @param {array} unresolvedErrors
-   * @returns {array} remaining POST errors
-   */
-  async resolvePostErrors(unresolvedErrors) {
-    const remainingErrors = await Promise.map(unresolvedErrors, async (error) => {
-      let resolve;
-      switch (error.type) {
-        case ERROR_TYPES.CREATE_APPLICANT: {
-          resolve = await this.postNewApplications(error.payload);
-          break;
-        }
-        case ERROR_TYPES.CREATE_NOTE:
-        default: {
-          resolve = await this.jazzHR.createNote(error.payload.applicant_id, error.payload.contents);
-          break;
-        }
-      }
-      return resolve;
-    });
-
-    return remainingErrors;
   }
 
   /**
@@ -126,7 +101,7 @@ class Worker {
    * @param {array} applications
    */
   async postNewApplications(applications) {
-    const possibleErrors = await Promise.map(applications, async (application) => {
+    await Promise.map(applications, async (application) => {
       const applicationTransformer = new ApplicationTransformer(application);
 
       const jobKey = stringToKey(application.offer.name[0].name);
@@ -137,28 +112,16 @@ class Worker {
       const base64Resume = await this.startupJobs.getBase64Attachment(resumeUrl);
 
       const jazzHrApplication = applicationTransformer.buildApplicationPayload(jobId, base64Resume);
-      let resolve;
-      try {
-        const jazzHrId = await this.jazzHR.createApplicant(jazzHrApplication);
+      const jazzHrId = await this.jazzHR.createApplicant(jazzHrApplication);
 
-        // Make sure the jazzHR application is created
-        await sleep(SLEEP_AFTER_TRANSFER);
+      // Make sure the jazzHR application is created
+      await sleep(SLEEP_AFTER_TRANSFER);
 
-        // Create notes to the application (containes notes from startupjobs, attachment links if multiple or not a document, starupjobs ID)
-        await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {
-          await this.jazzHR.createNote(jazzHrId, note);
-        });
-      } catch (err) {
-        if (err.name === JAZZ_HR_RESOLVABLE_ERROR) {
-          const errorData = JSON.parse(err.message);
-          log.error('Failed to POST to jazzHR. Saved the request so it might be resolved in the next actor run', errorData);
-          resolve = errorData;
-        }
-      }
-      return resolve;
+      // Create notes to the application (containes notes from startupjobs, attachment links if multiple or not a document, starupjobs ID)
+      await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {
+        await this.jazzHR.createNote(jazzHrId, note);
+      });
     }, { concurrency: TRANSFER_APPLICATIONS_CONCURRENCY });
-
-    return possibleErrors.filter((error) => !!error);
   }
 }
 

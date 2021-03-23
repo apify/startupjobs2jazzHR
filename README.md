@@ -22,10 +22,8 @@ This actor is build on [startupjobs api](https://www.startupjobs.cz/dev/public-a
 2. Gets new startupjobs applications and filters them by following conditions:
     1. Application was not posted before, which is determined by comparing with the state
     2. Application is connected to the job offer, that is listed on jazzHR as well. Decides based on jazzHR and startupjobs offer name equality
-3. Tries to resolve POST errors from previous runs if any
-4. POST filtered applications to jazzHR
-5. Saves POST erros if any to state for the next run
-6. Updates current state for the next run
+3. POST filtered applications to jazzHR
+4. Updates current state for the next run
 
 ## Documentation reference
 
