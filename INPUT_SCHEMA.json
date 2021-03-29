@@ -1,19 +1,19 @@
 {
   "title": "startupjobs2jazzHR actor input schema",
-  "description": "Input schema for the startupjobs2jazzHR actor.",
+  "description": "Please fill in the StartupJobs and JazzHR token. The tokens are needed for the actor to work properly.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "startupJobsToken": {
-      "title": "Startupjobs.cz token",
+      "title": "StartupJobs token",
       "type": "string",
-      "description": "Your statupjobs.cz token.",
+      "description": "Your StartupJobs token. You have to contact the StartupJobs support to generate it for you.",
       "editor": "textfield"
     },
     "jazzHRToken": {
       "title": "JazzHR token",
       "type": "string",
-      "description": "Your jazzHR token.",
+      "description": "Your JazzHR token. <a href='https://success.jazzhr.com/hc/en-us/articles/222540508-API-Overview#whereiskey'> Here is how to find your token.</a>",
       "editor": "textfield"
     }
   },
