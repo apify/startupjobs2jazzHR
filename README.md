@@ -1,17 +1,16 @@
 # StartupJobs2JazzHR
-​
-This actor (see [Apify Actor documentation](https://docs.apify.com/actor) for more info on Apify actors) transfers job applications from StartupJobs that are connected to a job offer that exists in JazzHR and puts them into JazzHR. The transferred applications are saved into the dataset so that on consecutive runs, they are not processed again.
-​
-For example, if the job application is for a backend developer in StartupJobs, but this job offer does not exist on JazzHR, the application will not be transferred.
-​
-To pair StartupJobs job offers with those in JazzHR, the offers simply need to have their names equal.
-​
-The actor is built on [StartupJobs API](https://www.startupjobs.cz/dev/public-api) and [JazzHR API](http://www.resumatorapi.com/v1/)
+This actor (see [Apify Actor documentation](https://docs.apify.com/actor) for more info on Apify actors) transfers job applications from StartupJobs that are connected to a job offer that exists in JazzHR and puts them into JazzHR. The transferred applications are saved into the dataset so that on consecutive runs, they are not processed again. 
+
+For example, if the job application is for a backend developer in StartupJobs, but this job offer does not exist on JazzHR, the application will not be transferred.    
+To pair StartupJobs job offers with those in JazzHR, the offers simply need to have their names equal.   
+
+The actor is built on [StartupJobs API](https://www.startupjobs.cz/dev/public-api) and [JazzHR API](http://www.resumatorapi.com/v1/).
+
 ​
 ## Input
-The StartupJobs and JazzHR token are needed so that the actor can use their public APIs. 
+The StartupJobs and JazzHR token are needed so that the actor can use their public APIs.    
 ​
-To get a StartupJobs token you need to contact their support. 
+To get a StartupJobs token you need to contact their support.    
 ​
 [Here is how to get your JazzHR token](https://success.jazzhr.com/hc/en-us/articles/222540508-API-Overview#whereiskey).
 ```
@@ -33,7 +32,6 @@ The actor keeps a record of already processed applications in the dataset, so it
 4. Updates current state for next run.
 ​
 ## Documentation reference
-​
 - [Apify SDK](https://sdk.apify.com/)
 - [Apify Actor documentation](https://docs.apify.com/actor)
 - [Apify CLI](https://docs.apify.com/cli)
