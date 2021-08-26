@@ -96,7 +96,6 @@ class JazzHRClient {
     if (data._error) {
       const errorData = {
         type: ERROR_TYPES.CREATE_APPLICANT,
-        payload: applicant,
         message: data._error,
       };
       const error = new Error(JSON.stringify(errorData));
