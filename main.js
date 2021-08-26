@@ -27,10 +27,13 @@ Apify.main(async () => {
     // Get new startupjobs application
     log.info('Get startupjobs applications');
     const postable = await worker.getNewApplications(initializedRecords);
-
-    // Post to jazzHR
-    log.info('Transfering applications', { total: postable.length, applications: postable });
-    await worker.postNewApplications(postable);
+    try {
+      // Post to jazzHR
+      log.info('Transfering applications', { total: postable.length, applications: postable });
+      await worker.postNewApplications(postable);
+    } catch (err) {
+      log.error('Transfer error', err);
+    }
 
     // Update state
     log.info('Updating actor state for next runs');
