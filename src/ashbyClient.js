@@ -1,7 +1,5 @@
 const api = require('./api.js');
-const { JAZZ_HR_GET_APPLICANTS_CONCURRENCY,
-  ERROR_TYPES
-} = require('./consts.js');
+const { ERROR_TYPES} = require('./consts.js');
 const { log } = require('./utils.js');
 
 class AshbyClient {
@@ -74,5 +72,6 @@ class AshbyClient {
       log.error(ERROR_TYPES.CREATE_NOTE, { message: data._error });
     }
   }
-
 }
+
+module.exports = AshbyClient;
