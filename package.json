@@ -24,11 +24,9 @@
   },
   "homepage": "https://github.com/nguyeda1/startupjobs2jazzHR#readme",
   "dependencies": {
-    "apify": "^2.2.0",
-    "axios": "^0.24.0",
-    "bluebird": "^3.7.2",
-    "moment": "^2.29.1",
-    "underscore": "^1.12.0"
+    "apify": "^3.2.6",
+    "axios": "^1.7.9",
+    "underscore": "^1.13.7"
   },
   "devDependencies": {
     "eslint": "^7.21.0",
