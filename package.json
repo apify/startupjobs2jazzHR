@@ -26,6 +26,8 @@
   "dependencies": {
     "apify": "^3.2.6",
     "axios": "^1.7.9",
+    "bluebird": "^3.7.2",
+    "moment": "^2.30.1",
     "underscore": "^1.13.7"
   },
   "devDependencies": {
