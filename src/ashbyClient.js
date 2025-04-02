@@ -14,12 +14,12 @@ export default class AshbyClient {
    */
   async openJobList() {
     const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } }, {headers: { Authorization: `Basic ${this.token}` }});
-    return data;
+    return data.results;
   }
 
   async applicantDetail(id) {
     const { data } = await api.post(`${this.url}/candidate.info`, { data: { id } }, { headers: { Authorization: `Basic ${this.token}` } });
-    return data;
+    return data.results;
   }
 
   /**
@@ -30,7 +30,7 @@ export default class AshbyClient {
   async applicants2JobsList(cursor) {
     let { data } = await api.post(`${this.url}/candidate.list`, cursor ? { data: { cursor } } : {}, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.moreDataAvailable) {
-      data = [...data, ...await this.applicants2JobsList(data.cursor)];
+      data = [...data.results, ...await this.applicants2JobsList(data.cursor)];
     }
     return data;
   }
