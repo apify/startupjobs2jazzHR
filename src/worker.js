@@ -4,7 +4,6 @@ import AshbyClient from './ashbyClient.js';
 import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey } from './utils.js';
 import { sleep } from '@crawlee/utils';
 import { SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
-import { log } from 'apify';
 
 /**
  * Worker should not be instantiated via contructor but via build method
