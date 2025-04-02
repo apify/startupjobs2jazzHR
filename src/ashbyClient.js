@@ -79,6 +79,7 @@ export default class AshbyClient {
     const { data } = await api.post(`${this.url}/application.create`, {
       candidateId: applicantId,
       jobId,
+      interviewStageId: 'FirstPreInterviewScreen',
     },{headers: { Authorization: `Basic ${this.token}` }});
     if (data.errors) {
       log.error(ERROR_TYPES.CREATE_NOTE, { message: data.errors });

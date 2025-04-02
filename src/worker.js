@@ -4,6 +4,7 @@ import AshbyClient from './ashbyClient.js';
 import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey } from './utils.js';
 import { sleep } from '@crawlee/utils';
 import { SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
+import { log } from 'apify';
 
 /**
  * Worker should not be instantiated via contructor but via build method
@@ -29,25 +30,11 @@ export default class Worker {
     const jobs = await ashbyClient.openJobList();
     const appliableJobs = jobs
       .reduce((acc, job) => {
-        acc[job.id] = stringToKey(job.title);
+        acc[job.id] = { title: stringToKey(job.title), planId: job.defaultInterviewPlanId };
         return acc;
       }, {});
 
     return new Worker(startupJobs, ashbyClient, appliableJobs);
-  }
-
-  /**
-   * Return map of appliable jobs
-   * @returns { { [id]: string } } map with ids as key and dashed cased title as value
-   */
-  async getAppliableJobs() {
-    // Get current jazzHR jobs
-    const jobs = await this.jazzHR.jobList();
-    // Convert jazzHR jobs to { [job_id: string]: dashCaseTitle : string } map
-    return jobs.reduce((acc, job) => {
-      acc[job.id] = stringToKey(job.title);
-      return acc;
-    }, {});
   }
 
   /**
@@ -69,7 +56,7 @@ export default class Worker {
         id: record.id,
         applyDate: details.apply_date,
         email: stringToKey(details.email),
-        jobKey: this.appliableJobs[record.job_id],
+        jobKey: this.appliableJobs[record.job_id].title,
         source: details.source,
         jazzHrApplicationId: record.applicant_id,
       };
@@ -87,7 +74,7 @@ export default class Worker {
     const applicationsWithDetails = await this.startupJobs.applicationsWithDetails(applications
       .filter((application) => !!application.offer)
       .filter((application) => !records.find((record) => parseStartupJobsIdFromJazzHR(record.source) === application.id))
-      .filter((application) => Object.values(this.appliableJobs).includes(stringToKey(application.offer.names[0].name)))
+      .filter((application) => Object.values(this.appliableJobs).find(({ title }) => stringToKey(application.offer.names[0].name)))
       .map((application) => application.id));
 
     return applicationsWithDetails;
@@ -102,7 +89,7 @@ export default class Worker {
       const applicationTransformer = new ApplicationTransformer(application);
 
       const jobKey = stringToKey(application.offer.name[0].name);
-      const jobId = Object.keys(this.appliableJobs).find((key) => this.appliableJobs[key] === jobKey);
+      const jobId = Object.keys(this.appliableJobs).find((key) => this.appliableJobs[key].title === jobKey);
 
       const resumeUrl = applicationTransformer.buildResumeUrl();
 
