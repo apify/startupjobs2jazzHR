@@ -44,8 +44,6 @@ export class ApplicationTransformer {
       email,
       phoneNumber: phone,
       linkedInUrl: linkedin?.url || null,
-      // Include source ID if available
-      sourceId: '4a3af47a-28a7-462d-a8c5-edb55668b8c1', // StartupJobs inbound
       createdAt: moment(created_at).format('YYYY-MM-DD'),
     };
 
