@@ -13,12 +13,12 @@ export default class AshbyClient {
    * @returns {array} job list
    */
   async openJobList() {
-    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } });
+    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] }, headers: { Authorization: `Basic ${this.token}` } });
     return data;
   }
 
   async applicantDetail(id) {
-    const { data } = await api.get(`${this.url}/candidate.info`, { data: { id } });
+    const { data } = await api.get(`${this.url}/candidate.info`, { data: { id }, headers: { Authorization: `Basic ${this.token}` } });
     return data;
   }
 
@@ -50,7 +50,9 @@ export default class AshbyClient {
    * @returns {string} applicant id
    */
   async createApplicant(applicant) {
-    const { data } = await api.post(`${this.url}/candidate.create`, this.postConfig(applicant));
+    const { data } = await api.post(`${this.url}/candidate.create`, {
+      headers: { Authorization: `Basic ${this.token}` }
+    });
     if (data.errors) {
       log.error(ERROR_TYPES.CREATE_APPLICANT, { message: data._error });
     }
@@ -66,7 +68,7 @@ export default class AshbyClient {
     const { data } = await api.post(`${this.url}/candidate.createNote`, {
       candidateId: applicant_id,
       note: contents,
-    });
+    },{headers: { Authorization: `Basic ${this.token}` }});
     if (data.errors) {
       log.error(ERROR_TYPES.CREATE_NOTE, { message: data._error });
     }
