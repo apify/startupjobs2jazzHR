@@ -15,9 +15,10 @@ const { startupJobsToken, ashbyToken } = input;
 const dataset = await Dataset.open('startupjobs-2-jazzhr-records');
 
 const worker = await Worker.create(startupJobsToken, ashbyToken);
+log.info('Startup job list done');
 const { items: stateRecords } = await dataset.getData();
 
-console.log({ stateRecords });
+log.info({ stateRecords });
 
 try {
 // Initialize values from state
