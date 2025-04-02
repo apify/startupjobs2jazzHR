@@ -1,6 +1,6 @@
 const Promise = require('bluebird');
-const JazzHRClient = require('./jazzHRClient');
 const StartupJobsClient = require('./startupJobsClient');
+const AshbyClient = require('./ashbyClient');
 const {
   stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, sleep,
 } = require('./utils');
@@ -14,28 +14,28 @@ const {
  * Uses startupJobs and jazzHR clients
  */
 class Worker {
-  constructor(startupJobs, jazzHR, appliableJobs) {
+  constructor(startupJobs, ashbyClient, appliableJobs) {
     this.startupJobs = startupJobs;
-    this.jazzHR = jazzHR;
+    this.jazzHR = ashbyClient;
     this.appliableJobs = appliableJobs;
   }
 
   /**
    * Used to initialize Worker
    * @param {string} startupJobsToken
-   * @param {string} jazzHrToken
+   * @param {string} ashbyToken
    * @returns {Worker} instance
    */
-  static async create(startupJobsToken, jazzHrToken) {
+  static async create(startupJobsToken, ashbyToken) {
     const startupJobs = new StartupJobsClient(startupJobsToken);
-    const jazzHR = new JazzHRClient(jazzHrToken);
-    const jobs = await jazzHR.openJobList();
+    const ashbyClient = new AshbyClient(ashbyToken);
+    const jobs = await ashbyClient.openJobList();
     const appliableJobs = jobs
       .reduce((acc, job) => {
         acc[job.id] = stringToKey(job.title);
         return acc;
       }, {});
-    return new Worker(startupJobs, jazzHR, appliableJobs);
+    return new Worker(startupJobs, ashbyClient, appliableJobs);
   }
 
   /**
@@ -81,7 +81,6 @@ class Worker {
   /**
    * Get new applications from startupjobs
    * @param {array} records
-   * @param {object} lastApplication
    * @returns {array} new applications
    */
   async getNewApplications(records) {

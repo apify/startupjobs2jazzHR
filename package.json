@@ -24,14 +24,14 @@
   },
   "homepage": "https://github.com/nguyeda1/startupjobs2jazzHR#readme",
   "dependencies": {
-    "apify": "^3.2.6",
+    "apify": "^3.4.0",
     "axios": "^1.7.9",
     "bluebird": "^3.7.2",
     "moment": "^2.30.1",
     "underscore": "^1.13.7"
   },
   "devDependencies": {
-    "eslint": "^7.21.0",
+    "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.22.1"
   }

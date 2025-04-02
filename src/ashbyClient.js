@@ -1,6 +1,6 @@
-const api = require('./api.js');
-const { ERROR_TYPES} = require('./consts.js');
-const { log } = require('./utils.js');
+const api = require('./api');
+const { ERROR_TYPES } = require('./consts');
+const { log } = require('./utils');
 
 class AshbyClient {
   constructor(token) {
@@ -13,7 +13,7 @@ class AshbyClient {
    * @returns {array} job list
    */
   async openJobList() {
-    const { data } = await api.post(`${this.url}/job.list`, {data: {status: ['Open'] } });
+    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } });
     return data;
   }
 
@@ -23,7 +23,7 @@ class AshbyClient {
   }
 
   /**
-   * Recuresively gets all applicant/jobs records. By default jazzHR only provides 100 results per page
+   * Recursively gets all applicant/jobs records. By default jazzHR only provides 100 results per page
    * @param {string} cursor
    * @returns {array} applicant/job record
    */
@@ -41,7 +41,7 @@ class AshbyClient {
    * @returns {array} applicants details
    */
   async applicantsWithDetails(applicantIds) {
-    return await Promise.all(applicantIds.map((id => this.applicantDetail(id))));
+    return Promise.all(applicantIds.map(((id) => this.applicantDetail(id))));
   }
 
   /**
@@ -63,7 +63,6 @@ class AshbyClient {
    * @param {string} contents
    */
   async createNote(applicant_id, contents) {
-
     const { data } = await api.post(`${this.url}/candidate.createNote`, {
       candidateId: applicant_id,
       note: contents,
