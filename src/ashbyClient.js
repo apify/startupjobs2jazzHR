@@ -13,12 +13,12 @@ export default class AshbyClient {
    * @returns {array} job list
    */
   async openJobList() {
-    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] }, headers: { Authorization: `Basic ${this.token}` } });
+    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } }, {headers: { Authorization: `Basic ${this.token}` }});
     return data;
   }
 
   async applicantDetail(id) {
-    const { data } = await api.get(`${this.url}/candidate.info`, { data: { id }, headers: { Authorization: `Basic ${this.token}` } });
+    const { data } = await api.post(`${this.url}/candidate.info`, { data: { id } }, { headers: { Authorization: `Basic ${this.token}` } });
     return data;
   }
 
@@ -28,7 +28,7 @@ export default class AshbyClient {
    * @returns {array} applicant/job record
    */
   async applicants2JobsList(cursor) {
-    let { data } = await api.get(`${this.url}/candidate.list`, cursor ? { data: { cursor } } : {});
+    let { data } = await api.post(`${this.url}/candidate.list`, cursor ? { data: { cursor } } : {}, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.moreDataAvailable) {
       data = [...data, ...await this.applicants2JobsList(data.cursor)];
     }
@@ -50,7 +50,7 @@ export default class AshbyClient {
    * @returns {string} applicant id
    */
   async createApplicant(applicant) {
-    const { data } = await api.post(`${this.url}/candidate.create`, {
+    const { data } = await api.post(`${this.url}/candidate.create`, {},{
       headers: { Authorization: `Basic ${this.token}` }
     });
     if (data.errors) {
