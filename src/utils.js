@@ -34,28 +34,22 @@ export class ApplicationTransformer {
    * Transforms startupjob application to jazzHR application
    * @returns {object} transform application
    */
-  buildApplicationPayload(jobId, base64Resume) {
+  buildApplicationPayload(jobId) {
     const {
-      name, email, created_at, phone, linkedin, text, id,
+      name, email, created_at, phone, linkedin,
     } = this.application;
 
-    const { first_name, last_name } = splitFullname(name);
-
-    const payload = {
-      first_name,
-      last_name: last_name || '[NO LAST NAME PROVIDED]',
+    const newPayload = {
+      name,
       email,
-      apply_date: moment(created_at).format('YYYY-MM-DD'),
-      phone,
-      linkedin: linkedin.url,
-      coverletter: htmlToText(text),
-      job: jobId,
-      source: STARTUP_JOBS_ID_PREFIX + id,
+      phoneNumber: phone,
+      linkedInUrl: linkedin?.url || null,
+      // Include source ID if available
+      sourceId: '4a3af47a-28a7-462d-a8c5-edb55668b8c1', // StartupJobs inbound
+      createdAt: moment(created_at).format('YYYY-MM-DD'),
     };
 
-    if (base64Resume) payload['base64-resume'] = base64Resume;
-
-    return payload;
+    return newPayload;
   }
 
   /**

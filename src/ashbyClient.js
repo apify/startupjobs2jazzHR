@@ -28,11 +28,12 @@ export default class AshbyClient {
    * @returns {array} applicant/job record
    */
   async applicants2JobsList(cursor) {
+    let results = []
     let { data } = await api.post(`${this.url}/candidate.list`, cursor ? { data: { cursor } } : {}, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.moreDataAvailable) {
-      data = [...data.results, ...await this.applicants2JobsList(data.cursor)];
+      results = [...data.results, ...await this.applicants2JobsList(data.cursor)];
     }
-    return data;
+    return results;
   }
 
   /**
@@ -50,11 +51,11 @@ export default class AshbyClient {
    * @returns {string} applicant id
    */
   async createApplicant(applicant) {
-    const { data } = await api.post(`${this.url}/candidate.create`, {},{
+    const { data } = await api.post(`${this.url}/candidate.create`, applicant,{
       headers: { Authorization: `Basic ${this.token}` }
     });
     if (data.errors) {
-      log.error(ERROR_TYPES.CREATE_APPLICANT, { message: data._error });
+      log.error(ERROR_TYPES.CREATE_APPLICANT, { message: data.errors });
     }
     return data.results.id;
   }
@@ -70,7 +71,17 @@ export default class AshbyClient {
       note: contents,
     },{headers: { Authorization: `Basic ${this.token}` }});
     if (data.errors) {
-      log.error(ERROR_TYPES.CREATE_NOTE, { message: data._error });
+      log.error(ERROR_TYPES.CREATE_NOTE, { message: data.errors });
+    }
+  }
+
+  async createApplication(jobId, applicantId) {
+    const { data } = await api.post(`${this.url}/application.create`, {
+      candidateId: applicantId,
+      jobId,
+    },{headers: { Authorization: `Basic ${this.token}` }});
+    if (data.errors) {
+      log.error(ERROR_TYPES.CREATE_NOTE, { message: data.errors });
     }
   }
 }

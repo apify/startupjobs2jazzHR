@@ -32,7 +32,6 @@ export default class Worker {
         acc[job.id] = stringToKey(job.title);
         return acc;
       }, {});
-    console.log({ appliableJobs });
 
     return new Worker(startupJobs, ashbyClient, appliableJobs);
   }
@@ -106,18 +105,18 @@ export default class Worker {
       const jobId = Object.keys(this.appliableJobs).find((key) => this.appliableJobs[key] === jobKey);
 
       const resumeUrl = applicationTransformer.buildResumeUrl();
-      // Download resume, turn it to base64 and pass it to jazzHR
-      const base64Resume = await this.startupJobs.getBase64Attachment(resumeUrl);
 
-      const jazzHrApplication = applicationTransformer.buildApplicationPayload(jobId, base64Resume);
-      const jazzHrId = await this.jazzHR.createApplicant(jazzHrApplication);
+      const ashbyApplication = applicationTransformer.buildApplicationPayload(jobId);
+      const ashbyCandidateId = await this.jazzHR.createApplicant(ashbyApplication);
+
+      await this.jazzHR.createApplication(jobId, ashbyCandidateId);
 
       // Make sure the jazzHR application is created
       await sleep(SLEEP_AFTER_TRANSFER);
 
       // Create notes to the application (containes notes from startupjobs, attachment links if multiple or not a document, starupjobs ID)
       await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {
-        await this.jazzHR.createNote(jazzHrId, note);
+        await this.jazzHR.createNote(ashbyCandidateId, note);
       });
     }, { concurrency: TRANSFER_APPLICATIONS_CONCURRENCY });
   }
