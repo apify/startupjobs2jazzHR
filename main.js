@@ -12,6 +12,7 @@ await Actor.init();
 const input = await Actor.getInput();
 const { startupJobsToken, ashbyToken } = input;
 // Open a named dataset
+console.log({ ashbyToken });
 const dataset = await Dataset.open('startupjobs-2-jazzhr-records');
 
 const worker = await Worker.create(startupJobsToken, ashbyToken);
