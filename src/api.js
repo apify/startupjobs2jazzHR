@@ -1,6 +1,6 @@
-const axios = require('axios');
-const _ = require('underscore');
-const { log } = require('./utils');
+import axios from 'axios';
+import _ from 'underscore';
+import { log } from 'apify'
 
 const api = axios.create();
 
@@ -16,4 +16,4 @@ api.interceptors.request.use((request) => {
   return request;
 });
 
-module.exports = api;
+export default api

@@ -1,8 +1,8 @@
-const api = require('./api');
-const { ERROR_TYPES } = require('./consts');
-const { log } = require('./utils');
+import api from './api.js';
+import { ERROR_TYPES } from './consts.js';
+import { log } from 'apify';
 
-class AshbyClient {
+export default class AshbyClient {
   constructor(token) {
     this.url = 'https://api.ashbyhq.com';
     this.token = token;
@@ -73,4 +73,3 @@ class AshbyClient {
   }
 }
 
-module.exports = AshbyClient;

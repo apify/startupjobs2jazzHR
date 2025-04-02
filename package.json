@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "This actor transfers new applications from startupjobs, that are connected to the job offer that exists in jazzHR and puts them into jazzHR.",
   "main": "main.js",
+  "type": "module",
   "scripts": {
     "start": "node main.js",
     "test": "echo \"Error: oops, the actor has no tests yet, sad!\" && exit 1"
@@ -24,6 +25,8 @@
   },
   "homepage": "https://github.com/nguyeda1/startupjobs2jazzHR#readme",
   "dependencies": {
+    "@apify/utilities": "^2.15.1",
+    "@crawlee/utils": "^3.13.0",
     "apify": "^3.4.0",
     "axios": "^1.7.9",
     "bluebird": "^3.7.2",

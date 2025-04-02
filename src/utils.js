@@ -1,14 +1,14 @@
-const moment = require('moment');
-const { utils: apifyUtils } = require('apify');
-const { STARTUP_JOBS_ID_PREFIX } = require('./consts');
+import { STARTUP_JOBS_ID_PREFIX } from './consts.js';
+import { htmlToText, sleep } from '@crawlee/utils';
+import { log } from 'apify'
+import moment from 'moment';
 
-const { htmlToText, sleep, log } = apifyUtils;
 /**
  * Trims, lowercases and dashcase given string
  * @param {string} title
  * @returns {string} formated string
  */
-function stringToKey(str) {
+export function stringToKey(str) {
   return str.trim().replace(/\s+/g, '-').toLowerCase();
 }
 
@@ -17,7 +17,7 @@ function stringToKey(str) {
  * @param {string} name
  * @returns {object} firstname and lastname
  */
-function splitFullname(name) {
+export function splitFullname(name) {
   const [first_name, ...restOfName] = name.split(' ');
   return {
     first_name,
@@ -25,7 +25,7 @@ function splitFullname(name) {
   };
 }
 
-class ApplicationTransformer {
+export class ApplicationTransformer {
   constructor(application) {
     this.application = application;
   }
@@ -104,7 +104,7 @@ class ApplicationTransformer {
  * @param {object} source
  * @returns {string} startupjobs candidate id
  */
-function parseStartupJobsIdFromJazzHR(source) {
+export function parseStartupJobsIdFromJazzHR(source) {
   return source.replace(STARTUP_JOBS_ID_PREFIX, '');
 }
 
@@ -113,17 +113,6 @@ function parseStartupJobsIdFromJazzHR(source) {
  * @param {ArrayBuffer} buffer
  * @returns {string} in base64
  */
-function bufferToBase64(buffer) {
+export function bufferToBase64(buffer) {
   return Buffer.from(buffer, 'binary').toString('base64');
 }
-
-module.exports = {
-  stringToKey,
-  splitFullname,
-  ApplicationTransformer,
-  parseStartupJobsIdFromJazzHR,
-  htmlToText,
-  sleep,
-  log,
-  bufferToBase64,
-};

@@ -1,19 +1,16 @@
-const Promise = require('bluebird');
-const StartupJobsClient = require('./startupJobsClient');
-const AshbyClient = require('./ashbyClient');
-const {
-  stringToKey, ApplicationTransformer, parseStartupJobsIdFromJazzHR, sleep,
-} = require('./utils');
-const {
-  SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY,
-} = require('./consts');
+import Promise from 'bluebird';
+import StartupJobsClient from './startupJobsClient.js';
+import AshbyClient from './ashbyClient.js';
+import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey } from './utils.js';
+import { sleep } from '@crawlee/utils';
+import { SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
 
 /**
  * Worker should not be instantiated via contructor but via build method
  * Contains methods used in Apify.main
  * Uses startupJobs and jazzHR clients
  */
-class Worker {
+export default class Worker {
   constructor(startupJobs, ashbyClient, appliableJobs) {
     this.startupJobs = startupJobs;
     this.jazzHR = ashbyClient;
@@ -123,5 +120,3 @@ class Worker {
     }, { concurrency: TRANSFER_APPLICATIONS_CONCURRENCY });
   }
 }
-
-module.exports = Worker;

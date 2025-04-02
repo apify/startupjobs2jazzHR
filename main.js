@@ -3,9 +3,8 @@
 // so that it can be started by running "npm start".
 
 // Import Apify SDK. For more information, see https://sdk.apify.com/
-const { Actor, Dataset } = require('apify');
-const Worker = require('./src/worker');
-const { log } = require('./src/utils');
+import { Actor, Dataset, log } from 'apify';
+import Worker from './src/worker.js';
 
 await Actor.init();
 

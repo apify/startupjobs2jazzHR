@@ -1,9 +1,7 @@
-const Promise = require('bluebird');
-const api = require('./api');
-const {
-  ERROR_TYPES, JAZZ_HR_GET_APPLICANTS_CONCURRENCY,
-} = require('./consts');
-const { log } = require('./utils');
+import Promise from 'bluebird';
+import api from './api.js';
+import { ERROR_TYPES, JAZZ_HR_GET_APPLICANTS_CONCURRENCY } from './consts.js';
+import { log } from './utils.js';
 
 /**
  * Class wrapping jazzHr endpoints
