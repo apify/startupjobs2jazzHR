@@ -17,6 +17,8 @@ const dataset = await Dataset.open('startupjobs-2-jazzhr-records');
 const worker = await Worker.create(startupJobsToken, ashbyToken);
 const { items: stateRecords } = await dataset.getData();
 
+console.log({ stateRecords });
+
 try {
 // Initialize values from state
   log.info('Initiate state');
@@ -39,7 +41,7 @@ try {
 }
 
 try {
-  // Post to jazzHR
+  // Post to ashby
   log.info('Transfering applications', { total: postable.length, applications: postable });
   await worker.postNewApplications(postable);
 } catch (err) {
