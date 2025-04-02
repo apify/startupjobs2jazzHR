@@ -32,6 +32,8 @@ export default class Worker {
         acc[job.id] = stringToKey(job.title);
         return acc;
       }, {});
+    console.log({ appliableJobs });
+
     return new Worker(startupJobs, ashbyClient, appliableJobs);
   }
 
