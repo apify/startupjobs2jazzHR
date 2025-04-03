@@ -3,7 +3,7 @@
 // so that it can be started by running "npm start".
 
 // Import Apify SDK. For more information, see https://sdk.apify.com/
-import { Actor, Dataset, log } from 'apify';
+import { Actor, log } from 'apify';
 import Worker from './src/worker.js';
 
 await Actor.init();
@@ -31,6 +31,7 @@ try {
 }
 
 const { items: initializedRecords } = await dataset.get();
+log.info(initializedRecords)
 let postable = [];
 try {
   // Get new startupjobs application
