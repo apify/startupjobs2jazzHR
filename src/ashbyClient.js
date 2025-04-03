@@ -23,7 +23,7 @@ export default class AshbyClient {
   }
 
   /**
-   * Recursively gets all applicant/jobs records. By default jazzHR only provides 100 results per page
+   * Recursively gets all applicant/jobs records. By default Ashby only provides 100 results per page
    * @param {string} cursor
    * @returns {array} applicant/job record
    */
@@ -32,6 +32,8 @@ export default class AshbyClient {
     let { data } = await api.post(`${this.url}/candidate.list`, cursor ? { data: { cursor } } : {}, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.moreDataAvailable) {
       results = [...data.results, ...await this.applicants2JobsList(data.cursor)];
+    } else {
+      results = [...results, ...data.results];
     }
     return results;
   }

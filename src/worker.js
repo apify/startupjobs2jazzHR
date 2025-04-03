@@ -4,6 +4,7 @@ import AshbyClient from './ashbyClient.js';
 import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey } from './utils.js';
 import { sleep } from '@crawlee/utils';
 import { SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
+import { log } from 'apify';
 
 /**
  * Worker should not be instantiated via contructor but via build method
@@ -47,17 +48,17 @@ export default class Worker {
     // Filter those that are new from last actor run
     const newApplicants2Jobs = applicants2Jobs.filter((record) => !existingRecords.find((existingRecord) => existingRecord.id === record.id));
     // Get details for new applicants from jazzHR
-    const newApplicationsDetails = await this.jazzHR.applicantsWithDetails(newApplicants2Jobs.map((a2j) => a2j.applicant_id));
+
+    log.info("newApplicationsDetails");
+
     // Updated current map of email/job pair
     return newApplicants2Jobs.map((record) => {
-      const details = newApplicationsDetails.find((applicant) => applicant.id === record.applicant_id);
       return {
         id: record.id,
-        applyDate: details.apply_date,
-        email: stringToKey(details.email),
-        jobKey: this.appliableJobs[record.job_id].title,
-        source: details.source,
-        jazzHrApplicationId: record.applicant_id,
+        applyDate: record.createdAt,
+        email: record.primaryEmailAddress?.value,
+        source: record.source?.id,
+        jazzHrApplicationId: record.applicationIds[0],
       };
     });
   }

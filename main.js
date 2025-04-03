@@ -16,11 +16,9 @@ const dataset = await Actor.apifyClient.dataset('k76VMuW7xHGMHN911');
 
 const worker = await Worker.create(startupJobsToken, ashbyToken);
 log.info('Startup job list done');
-console.log(dataset.id);
 
 try {
-  const datasetBuffer = await dataset.downloadItems('json');
-  const stateRecords = JSON.parse(datasetBuffer.toString());
+  const { items: stateRecords } = await dataset.listItems({ limit: 1000, desc: true });
 
   // Initialize values from state
   log.info('Initiate state');
@@ -31,7 +29,7 @@ try {
   throw err;
 }
 
-const { items: initializedRecords } = await dataset.get();
+const { items: initializedRecords } = await dataset.listItems({ limit: 1000, desc: true });
 log.info('initialized records', { initializedRecords })
 let postable = [];
 try {
