@@ -19,10 +19,11 @@ log.info('Startup job list done');
 console.log(dataset.id);
 
 try {
-  const { items: stateRecords, cleanItemCount} = await dataset.get();
+  const datasetBuffer = await dataset.downloadItems('json');
+  const stateRecords = JSON.parse(datasetBuffer.toString());
 
   // Initialize values from state
-  log.info('Initiate state', { cleanItemCount });
+  log.info('Initiate state');
   const initialRecords = await worker.getNewRecords(stateRecords);
   await dataset.pushItems(initialRecords);
 } catch (err) {
