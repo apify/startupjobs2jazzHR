@@ -3,13 +3,8 @@
 // so that it can be started by running "npm start".
 
 // Import Apify SDK. For more information, see https://sdk.apify.com/
-import { Actor, Dataset, log, ApifyClient } from 'apify';
+import { Actor, Dataset, log } from 'apify';
 import Worker from './src/worker.js';
-
-// Client initialization with the API token
-const client = new ApifyClient({
-  token: process.env['APIFY_TOKEN'],
-});
 
 await Actor.init();
 
@@ -17,7 +12,7 @@ await Actor.init();
 const input = await Actor.getInput();
 const { startupJobsToken, ashbyToken } = input;
 // Open a named dataset
-const dataset = await client.dataset('k76VMuW7xHGMHN911');
+const dataset = await Actor.apifyClient.dataset('k76VMuW7xHGMHN911');
 
 const worker = await Worker.create(startupJobsToken, ashbyToken);
 log.info('Startup job list done');
@@ -35,7 +30,7 @@ try {
   throw err;
 }
 
-const { items: initializedRecords } = await dataset.getData();
+const { items: initializedRecords } = await dataset.get();
 let postable = [];
 try {
   // Get new startupjobs application
@@ -59,7 +54,7 @@ let newRecords = [];
 try {
   log.info('Updating actor state for next runs');
   newRecords = await worker.getNewRecords(initializedRecords);
-  await dataset.pushData(newRecords);
+  await dataset.pushItems(newRecords);
 } catch (err) {
   log.error('Failed to update state from records for next runs', err);
   throw err;
