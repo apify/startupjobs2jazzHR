@@ -16,6 +16,8 @@ const dataset = await Dataset.open('startupjobs-2-jazzhr-records');
 
 const worker = await Worker.create(startupJobsToken, ashbyToken);
 log.info('Startup job list done');
+console.log(dataset.id);
+
 const { items: stateRecords } = await dataset.getData();
 
 log.info({ stateRecords });
@@ -42,8 +44,8 @@ try {
 }
 
 try {
-  // Post to ashby
-  log.info('Transfering applications', { total: postable.length, applications: postable });
+  // Post to Ashby
+  log.info('Transferring applications', { total: postable.length, applications: postable });
   await worker.postNewApplications(postable);
 } catch (err) {
   log.error('Failed to POST new applications', err);
@@ -52,7 +54,6 @@ try {
 
 let newRecords = [];
 try {
-// Update state
   log.info('Updating actor state for next runs');
   newRecords = await worker.getNewRecords(initializedRecords);
   await dataset.pushData(newRecords);
