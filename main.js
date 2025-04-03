@@ -3,8 +3,13 @@
 // so that it can be started by running "npm start".
 
 // Import Apify SDK. For more information, see https://sdk.apify.com/
-import { Actor, Dataset, log } from 'apify';
+import { Actor, Dataset, log, ApifyClient } from 'apify';
 import Worker from './src/worker.js';
+
+// Client initialization with the API token
+const client = new ApifyClient({
+  token: process.env['APIFY_TOKEN'],
+});
 
 await Actor.init();
 
@@ -12,19 +17,19 @@ await Actor.init();
 const input = await Actor.getInput();
 const { startupJobsToken, ashbyToken } = input;
 // Open a named dataset
-const dataset = await Dataset.open('startupjobs-2-jazzhr-records');
+const dataset = await client.dataset('k76VMuW7xHGMHN911');
 
 const worker = await Worker.create(startupJobsToken, ashbyToken);
 log.info('Startup job list done');
 console.log(dataset.id);
 
 try {
-  const { items: stateRecords } = await dataset.getData();
+  const { items: stateRecords } = await dataset.get();
 
   // Initialize values from state
   log.info('Initiate state');
   const initialRecords = await worker.getNewRecords(stateRecords);
-  await dataset.pushData(initialRecords);
+  await dataset.pushItems(initialRecords);
 } catch (err) {
   log.error('Failed to initialize state from records', err);
   throw err;
