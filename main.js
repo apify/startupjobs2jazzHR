@@ -19,10 +19,10 @@ log.info('Startup job list done');
 console.log(dataset.id);
 
 try {
-  const { items: stateRecords } = await dataset.get();
+  const { items: stateRecords, cleanItemCount} = await dataset.get();
 
   // Initialize values from state
-  log.info('Initiate state');
+  log.info('Initiate state', { cleanItemCount });
   const initialRecords = await worker.getNewRecords(stateRecords);
   await dataset.pushItems(initialRecords);
 } catch (err) {
@@ -31,7 +31,7 @@ try {
 }
 
 const { items: initializedRecords } = await dataset.get();
-log.info(initializedRecords)
+log.info('initialized records', { initializedRecords })
 let postable = [];
 try {
   // Get new startupjobs application
