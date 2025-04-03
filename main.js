@@ -18,12 +18,10 @@ const worker = await Worker.create(startupJobsToken, ashbyToken);
 log.info('Startup job list done');
 console.log(dataset.id);
 
-const { items: stateRecords } = await dataset.getData();
-
-log.info({ stateRecords });
-
 try {
-// Initialize values from state
+  const { items: stateRecords } = await dataset.getData();
+
+  // Initialize values from state
   log.info('Initiate state');
   const initialRecords = await worker.getNewRecords(stateRecords);
   await dataset.pushData(initialRecords);
