@@ -35,7 +35,7 @@ export default class StartupJobsClient {
    * @returns {array} applications
    */
   async applicationList() {
-    const { data } = await api.get(`${this.url}/applications?created_at.gt=2025-04-01`, this.getConfig());
+    const { data } = await api.get(`${this.url}/applications?created_at.gt=2025-04-04`, this.getConfig());
     return data;
   }
 
