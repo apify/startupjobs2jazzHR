@@ -73,7 +73,7 @@ export default class Worker {
     // Get applications details from startupJobs for those that are applications to jobs listed by jazzHR
     const applicationsWithDetails = await this.startupJobs.applicationsWithDetails(applications
       .filter((application) => !!application.offer)
-      .filter((application) => !records.find((record) => parseStartupJobsIdFromJazzHR(record.source) === application.id))
+      .filter((application) => !records.some((record) => record.source && parseStartupJobsIdFromJazzHR(record.source) === application.id))
       .filter((application) => Object.values(this.appliableJobs).find(({ title }) => stringToKey(application.offer.names[0].name)))
       .map((application) => application.id));
 
