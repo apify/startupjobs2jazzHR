@@ -29,7 +29,7 @@ export default class AshbyClient {
    */
   async applicants2JobsList(cursor) {
     let results = []
-    let { data } = await api.post(`${this.url}/candidate.list`, cursor ? { data: { cursor } } : {}, { headers: { Authorization: `Basic ${this.token}` } });
+    let { data } = await api.post(`${this.url}/candidate.list`, cursor ? { cursor } : {}, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.moreDataAvailable) {
       results = [...data.results, ...await this.applicants2JobsList(data.nextCursor)];
     } else {
