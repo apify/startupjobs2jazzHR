@@ -35,7 +35,10 @@ export default class StartupJobsClient {
    * @returns {array} applications
    */
   async applicationList() {
-    const { data } = await api.get(`${this.url}/applications?created_at.gt=2025-04-04`, this.getConfig());
+    const todayDate = new Date().toISOString().slice(0, 10);
+    const tomorrowDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const { data } = await api.get(`${this.url}/applications?created_at.gt=${todayDate}&created_at.lt=${tomorrowDate}`, this.getConfig());
     return data;
   }
 
