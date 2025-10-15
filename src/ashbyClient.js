@@ -1,6 +1,7 @@
+import { log } from 'apify';
+
 import api from './api.js';
 import { ERROR_TYPES } from './consts.js';
-import { log } from 'apify';
 
 export default class AshbyClient {
   constructor(token) {
@@ -13,7 +14,7 @@ export default class AshbyClient {
    * @returns {array} job list
    */
   async openJobList() {
-    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } }, {headers: { Authorization: `Basic ${this.token}` }});
+    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } }, { headers: { Authorization: `Basic ${this.token}` } });
     return data.results;
   }
 
@@ -28,8 +29,8 @@ export default class AshbyClient {
    * @returns {array} applicant/job record
    */
   async applicants2JobsList(cursor) {
-    let results = []
-    let { data } = await api.post(`${this.url}/candidate.list`, cursor ? { cursor } : {}, { headers: { Authorization: `Basic ${this.token}` } });
+    let results = [];
+    const { data } = await api.post(`${this.url}/candidate.list`, cursor ? { cursor } : {}, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.moreDataAvailable) {
       results = [...data.results, ...await this.applicants2JobsList(data.nextCursor)];
     } else {
@@ -53,13 +54,52 @@ export default class AshbyClient {
    * @returns {string} applicant id
    */
   async createApplicant(applicant) {
-    const { data } = await api.post(`${this.url}/candidate.create`, applicant,{
-      headers: { Authorization: `Basic ${this.token}` }
+    const { data } = await api.post(`${this.url}/candidate.create`, applicant, {
+      headers: { Authorization: `Basic ${this.token}` },
     });
     if (data.errors) {
       log.error(ERROR_TYPES.CREATE_APPLICANT, { message: data.errors });
     }
     return data.results.id;
+  }
+
+  /**
+   * POST attachments to the given candidate
+   * @param {string} applicantId
+   * @param {array} attachments
+  */
+  async uploadAttachments(applicantId, attachments) {
+    return Promise.all(attachments.map(async (attachment) => {
+      const fileResponse = await api.get(attachment.url, { responseType: 'arraybuffer' });
+
+      if (fileResponse.data.errors) {
+        log.error(ERROR_TYPES.FETCH_ATTACHMENT, { message: fileResponse.data.errors });
+        return false;
+      }
+
+      const file = new Uint8Array(fileResponse.data).buffer;
+
+      const formData = new FormData();
+      formData.append('candidateId', applicantId);
+      formData.append(
+        'file',
+        new Blob([file], { type: fileResponse.headers['Content-Type'] || 'application/octet-stream' }),
+        attachment.originalFilename,
+      );
+
+      const candidateUploadResponse = await api.post(
+        `${this.url}/candidate.uploadFile`,
+        formData,
+        { headers: { Authorization: `Basic ${this.token}` } },
+      );
+
+      if (candidateUploadResponse.data.errors) {
+        log.error(ERROR_TYPES.UPLOAD_ATTACHMENT, { message: candidateUploadResponse.data.errors });
+        return false;
+      }
+
+      return true;
+    }));
   }
 
   /**
@@ -71,7 +111,7 @@ export default class AshbyClient {
     const { data } = await api.post(`${this.url}/candidate.createNote`, {
       candidateId: applicant_id,
       note: contents,
-    },{headers: { Authorization: `Basic ${this.token}` }});
+    }, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.errors) {
       log.error(ERROR_TYPES.CREATE_NOTE, { message: data.errors });
     }
@@ -83,10 +123,9 @@ export default class AshbyClient {
       jobId,
       interviewStageId: 'FirstPreInterviewScreen',
       sourceId: '4a3af47a-28a7-462d-a8c5-edb55668b8c1', // StartupJobs inbound
-    },{headers: { Authorization: `Basic ${this.token}` }});
+    }, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.errors) {
       log.error(ERROR_TYPES.CREATE_NOTE, { message: data.errors });
     }
   }
 }
-
