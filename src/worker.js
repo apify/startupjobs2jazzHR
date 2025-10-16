@@ -1,10 +1,10 @@
 import Promise from 'bluebird';
+import { sleep } from '@crawlee/utils';
+import { log } from 'apify';
 import StartupJobsClient from './startupJobsClient.js';
 import AshbyClient from './ashbyClient.js';
 import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey } from './utils.js';
-import { sleep } from '@crawlee/utils';
 import { SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
-import { log } from 'apify';
 
 /**
  * Worker should not be instantiated via contructor but via build method
@@ -49,18 +49,16 @@ export default class Worker {
     const newApplicants2Jobs = applicants2Jobs.filter((record) => !existingRecords.find((existingRecord) => existingRecord.id === record.id));
     // Get details for new applicants from jazzHR
 
-    log.info("newApplicationsDetails");
+    log.info('newApplicationsDetails');
 
     // Updated current map of email/job pair
-    return newApplicants2Jobs.map((record) => {
-      return {
-        id: record.id,
-        applyDate: record.createdAt,
-        email: record.primaryEmailAddress?.value,
-        source: record.source?.id,
-        jazzHrApplicationId: record.applicationIds[0],
-      };
-    });
+    return newApplicants2Jobs.map((record) => ({
+      id: record.id,
+      applyDate: record.createdAt,
+      email: record.primaryEmailAddress?.value,
+      source: record.source?.id,
+      jazzHrApplicationId: record.applicationIds[0],
+    }));
   }
 
   /**
@@ -91,11 +89,12 @@ export default class Worker {
       const jobKey = stringToKey(application.offer.name[0].name);
       const jobId = Object.keys(this.appliableJobs).find((key) => this.appliableJobs[key].title === jobKey);
 
-      const resumeUrl = applicationTransformer.buildResumeUrl();
+      const attachments = applicationTransformer.getAttachments();
 
       const ashbyApplication = applicationTransformer.buildApplicationPayload(jobId);
       const ashbyCandidateId = await this.jazzHR.createApplicant(ashbyApplication);
 
+      await this.jazzHR.uploadAttachments(ashbyCandidateId, attachments);
       await this.jazzHR.createApplication(jobId, ashbyCandidateId);
 
       // Make sure the jazzHR application is created

@@ -1,7 +1,8 @@
-import { STARTUP_JOBS_ID_PREFIX } from './consts.js';
 import { htmlToText, sleep } from '@crawlee/utils';
-import { log } from 'apify'
+import { log } from 'apify';
 import moment from 'moment';
+
+import { STARTUP_JOBS_ID_PREFIX } from './consts.js';
 
 /**
  * Trims, lowercases and dashcase given string
@@ -51,24 +52,23 @@ export class ApplicationTransformer {
   }
 
   /**
-   * Finds first document in attachments and gets its url
+   * Finds all text-based attachments in application
    * @param {object} application
-   * @returns {string} resume url
+   * @returns {array} attachments
    */
-  buildResumeUrl() {
+  getAttachments() {
     const {
       attachments,
     } = this.application;
 
-    const potentialResume = attachments
-      .find((attachment) => attachment.url.endsWith('.pdf')
+    return attachments.filter((attachment) => (
+      attachment.url.endsWith('.pdf')
         || attachment.url.endsWith('.doc')
         || attachment.url.endsWith('.docx')
         || attachment.url.endsWith('.rtf')
         || attachment.url.endsWith('.odt')
-        || attachment.url.endsWith('.txt'));
-
-    return (potentialResume || {}).url;
+        || attachment.url.endsWith('.txt')
+    ));
   }
 
   /**
@@ -83,9 +83,7 @@ export class ApplicationTransformer {
     if (notes) result.push(`Startup jobs note: ${notes}`);
 
     if (attachments.length > 0) {
-      result.push(`Startup jobs attachment links: ${attachments.reduce(
-        (acc, attachment) => `${acc + attachment.url},\n`, '',
-      )}`);
+      result.push(`Startup jobs attachment links: ${attachments.reduce((acc, attachment) => `${acc + attachment.url},\n`, '')}`);
     }
     return result;
   }

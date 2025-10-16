@@ -1,6 +1,7 @@
-import api from './api.js';
-import { ERROR_TYPES } from './consts.js';
 import { log } from 'apify';
+
+import api from './api.js';
+import { ERROR_TYPES, RESUME_KEYWORDS } from './consts.js';
 
 export default class AshbyClient {
   constructor(token) {
@@ -13,7 +14,7 @@ export default class AshbyClient {
    * @returns {array} job list
    */
   async openJobList() {
-    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } }, {headers: { Authorization: `Basic ${this.token}` }});
+    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } }, { headers: { Authorization: `Basic ${this.token}` } });
     return data.results;
   }
 
@@ -28,8 +29,8 @@ export default class AshbyClient {
    * @returns {array} applicant/job record
    */
   async applicants2JobsList(cursor) {
-    let results = []
-    let { data } = await api.post(`${this.url}/candidate.list`, cursor ? { cursor } : {}, { headers: { Authorization: `Basic ${this.token}` } });
+    let results = [];
+    const { data } = await api.post(`${this.url}/candidate.list`, cursor ? { cursor } : {}, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.moreDataAvailable) {
       results = [...data.results, ...await this.applicants2JobsList(data.nextCursor)];
     } else {
@@ -53,13 +54,106 @@ export default class AshbyClient {
    * @returns {string} applicant id
    */
   async createApplicant(applicant) {
-    const { data } = await api.post(`${this.url}/candidate.create`, applicant,{
-      headers: { Authorization: `Basic ${this.token}` }
+    const { data } = await api.post(`${this.url}/candidate.create`, applicant, {
+      headers: { Authorization: `Basic ${this.token}` },
     });
     if (data.errors) {
       log.error(ERROR_TYPES.CREATE_APPLICANT, { message: data.errors });
     }
     return data.results.id;
+  }
+
+  /**
+   * POST attachments to the given candidate
+   * @param {string} applicantId
+   * @param {Array<Object>} attachments
+  */
+  async uploadAttachments(applicantId, attachments) {
+    const suspectedResumeIndex = Math.max(
+      0,
+      attachments.findIndex((attachment) => RESUME_KEYWORDS.includes(attachment.originalFilename.toLowerCase()))
+    );
+
+    return Promise.all(attachments.map(async (attachment, i) => {
+      const fileResponse = await api.get(attachment.url, { responseType: 'arraybuffer' });
+
+      if (fileResponse.data.errors) {
+        log.error(ERROR_TYPES.FETCH_ATTACHMENT, { message: fileResponse.data.errors });
+        return false;
+      }
+
+      const file = new Uint8Array(fileResponse.data).buffer;
+      const fileName = attachment.originalFilename;
+      const fileType = fileResponse.headers['Content-Type'];
+
+      return i === suspectedResumeIndex
+        ? this.uploadResume(applicantId, file, fileName, fileType)
+        : this.uploadAttachment(applicantId, file, fileName, fileType);
+    }));
+  }
+
+  /**
+   * POST an attachment for a specific applicant
+   * @param {string} applicantId 
+   * @param {TArrayBuffer} file
+   * @param {string} fileName
+   * @param {string} fileType
+   * @return {Promise<boolean>} success
+   */
+  async uploadAttachment(applicantId, file, fileName, fileType) {
+      const formData = new FormData();
+      
+      formData.append('candidateId', applicantId);
+      formData.append(
+        'file',
+        new Blob([file], { type: fileType || 'application/octet-stream' }),
+        fileName,
+      );
+
+      const { data } = await api.post(
+        `${this.url}/candidate.uploadFile`,
+        formData,
+        { headers: { Authorization: `Basic ${this.token}` } },
+      );
+
+      if (data.errors) {
+        log.error(ERROR_TYPES.UPLOAD_ATTACHMENT, { message: data.errors });
+        return false;
+      }
+
+      return true;
+  }
+
+  /**
+   * POST an attachment for a specific applicant
+   * @param {string} applicantId 
+   * @param {TArrayBuffer} file
+   * @param {string} fileName
+   * @param {string} fileType
+   * @return {Promise<boolean>} success
+   */
+  async uploadResume(applicantId, file, fileName, fileType) {
+      const formData = new FormData();
+      
+      formData.append('candidateId', applicantId);
+      formData.append(
+        'resume',
+        new Blob([file], { type: fileType || 'application/octet-stream' }),
+        fileName,
+      );
+
+      const { data } = await api.post(
+        `${this.url}/candidate.uploadResume`,
+        formData,
+        { headers: { Authorization: `Basic ${this.token}` } },
+      );
+
+      if (data.errors) {
+        log.error(ERROR_TYPES.UPLOAD_RESUME, { message: data.errors });
+        return false;
+      }
+
+      return true;
   }
 
   /**
@@ -71,7 +165,7 @@ export default class AshbyClient {
     const { data } = await api.post(`${this.url}/candidate.createNote`, {
       candidateId: applicant_id,
       note: contents,
-    },{headers: { Authorization: `Basic ${this.token}` }});
+    }, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.errors) {
       log.error(ERROR_TYPES.CREATE_NOTE, { message: data.errors });
     }
@@ -83,10 +177,9 @@ export default class AshbyClient {
       jobId,
       interviewStageId: 'FirstPreInterviewScreen',
       sourceId: '4a3af47a-28a7-462d-a8c5-edb55668b8c1', // StartupJobs inbound
-    },{headers: { Authorization: `Basic ${this.token}` }});
+    }, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.errors) {
       log.error(ERROR_TYPES.CREATE_NOTE, { message: data.errors });
     }
   }
 }
-
