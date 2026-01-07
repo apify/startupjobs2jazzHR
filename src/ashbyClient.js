@@ -7,42 +7,6 @@ export default class AshbyClient {
   constructor(token) {
     this.url = 'https://api.ashbyhq.com';
     this.token = token;
-
-    this.retryCount = 5;
-    this.retryDelay = 1000; // 1 second
-  }
-
-  /**
-   * Generic retry wrapper for API calls with exponential backoff
-   * @param {Function} apiCall - The API call function to execute
-   * @param {string} operationName - Name of the operation for logging
-   * @returns {Promise<any>} Result of the API call
-   */
-  async withRetry(apiCall, operationName) {
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await apiCall();
-      } catch (error) {
-        const statusCode = error.response?.status ?? 500;
-
-        const shouldRetry = statusCode >= 500;
-        const isLastAttempt = attempt === this.retryCount;
-        
-        if (shouldRetry && !isLastAttempt) {
-          const delay = this.retryDelay * Math.pow(2, attempt);
-          log.warning(`${operationName}: Ashby API returned ${statusCode}, retrying in ${delay}ms (attempt ${attempt + 1}/${this.retryCount})...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        } else {
-          log.error(`${operationName}_ERROR`, { 
-            message: `${operationName} failed after ${attempt + 1} attempts`, 
-            error: error.message,
-            status: error.response?.status 
-          });
-          
-          throw error;
-        }
-      }
-    }
   }
 
   /**
@@ -50,23 +14,13 @@ export default class AshbyClient {
    * @returns {array} job list
    */
   async openJobList() {
-    return this.withRetry(
-      async () => {
-        const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } }, { headers: { Authorization: `Basic ${this.token}` } });
-        return data.results;
-      },
-      'OPEN_JOB_LIST'
-    );
+    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } }, { headers: { Authorization: `Basic ${this.token}` } });
+    return data.results;
   }
 
   async applicantDetail(id) {
-    return this.withRetry(
-      async () => {
-        const { data } = await api.post(`${this.url}/candidate.info`, { data: { id } }, { headers: { Authorization: `Basic ${this.token}` } });
-        return data.results;
-      }, 
-      'APPLICANT_DETAIL'
-    );
+    const { data } = await api.post(`${this.url}/candidate.info`, { data: { id } }, { headers: { Authorization: `Basic ${this.token}` } });
+    return data.results;
   }
 
   /**
@@ -76,14 +30,7 @@ export default class AshbyClient {
    */
   async applicants2JobsList(cursor) {
     let results = [];
-    
-    const { data } = await this.withRetry(
-      async () => {
-        return await api.post(`${this.url}/candidate.list`, cursor ? { cursor } : {}, { headers: { Authorization: `Basic ${this.token}` } });
-      },
-      'APPLICANTS_TO_JOBS_LIST'
-    );
-    
+    const { data } = await api.post(`${this.url}/candidate.list`, cursor ? { cursor } : {}, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.moreDataAvailable) {
       results = [...data.results, ...await this.applicants2JobsList(data.nextCursor)];
     } else {

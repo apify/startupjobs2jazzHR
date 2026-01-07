@@ -29,6 +29,7 @@
     "@crawlee/utils": "^3.13.0",
     "apify": "^3.4.0",
     "axios": "^1.7.9",
+    "axios-retry": "^4.5.0",
     "bluebird": "^3.7.2",
     "moment": "^2.30.1",
     "underscore": "^1.13.7"
