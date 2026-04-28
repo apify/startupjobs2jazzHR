@@ -8,19 +8,20 @@ import Worker from './src/worker.js';
 
 await Actor.init();
 
-const SYNC_TOKEN_KEY = 'ashbyCandidateSyncToken';
+const SYNC_STORE_KEY = 'startupjobs-ashby-sync';
+const SYNC_STORE_TOKEN_KEY = 'ashbyCandidateSyncToken';
 
 // Initialize state values
 const input = await Actor.getInput();
 const { startupJobsToken, ashbyToken } = input;
 // Open a named dataset
 const dataset = await Actor.apifyClient.dataset('k76VMuW7xHGMHN911');
-const kv = await Actor.openKeyValueStore();
+const kv = await Actor.openKeyValueStore(SYNC_STORE_KEY);
 
 const worker = await Worker.create(startupJobsToken, ashbyToken);
 log.info('Startup job list done');
 
-let currentSyncToken = await kv.getValue(SYNC_TOKEN_KEY);
+let currentSyncToken = await kv.getValue(SYNC_STORE_TOKEN_KEY);
 log.info('Loaded Ashby syncToken', { hasToken: !!currentSyncToken });
 
 try {
@@ -31,7 +32,7 @@ try {
   const { records: initialRecords, syncToken: nextToken } = await worker.getNewRecords(stateRecords, currentSyncToken);
   await dataset.pushItems(initialRecords);
   if (nextToken) {
-    await kv.setValue(SYNC_TOKEN_KEY, nextToken);
+    await kv.setValue(SYNC_STORE_TOKEN_KEY, nextToken);
     currentSyncToken = nextToken;
   }
 } catch (err) {
@@ -67,7 +68,7 @@ try {
   newRecords = records;
   await dataset.pushItems(newRecords);
   if (nextToken) {
-    await kv.setValue(SYNC_TOKEN_KEY, nextToken);
+    await kv.setValue(SYNC_STORE_TOKEN_KEY, nextToken);
   }
 } catch (err) {
   log.error('Failed to update state from records for next runs', err);
