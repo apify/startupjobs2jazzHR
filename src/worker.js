@@ -38,27 +38,27 @@ export default class Worker {
   }
 
   /**
-   * Gets new records from jazzHR that are not saved in dataset yet
+   * Gets candidate records from Ashby that are not saved in dataset yet.
+   * Uses an Ashby syncToken when provided so subsequent runs only fetch deltas.
    * @param {array} existingRecords
-   * @returns {array} new records
+   * @param {string} [syncToken]
+   * @returns {Promise<{ records: object[], syncToken: string }>}
    */
-  async getNewRecords(existingRecords) {
-    // Get all applicants/jobs records from jazzHR
-    const applicants2Jobs = await this.jazzHR.applicants2JobsList();
-    // Filter those that are new from last actor run
+  async getNewRecords(existingRecords, syncToken) {
+    const { results: applicants2Jobs, syncToken: newSyncToken } = await this.jazzHR.applicants2JobsList(syncToken);
     const newApplicants2Jobs = applicants2Jobs.filter((record) => !existingRecords.find((existingRecord) => existingRecord.id === record.id));
-    // Get details for new applicants from jazzHR
 
-    log.info('newApplicationsDetails');
+    log.info('newApplicationsDetails', { fetched: applicants2Jobs.length, newSinceDataset: newApplicants2Jobs.length });
 
-    // Updated current map of email/job pair
-    return newApplicants2Jobs.map((record) => ({
+    const records = newApplicants2Jobs.map((record) => ({
       id: record.id,
       applyDate: record.createdAt,
       email: record.primaryEmailAddress?.value,
       source: record.source?.id,
       jazzHrApplicationId: record.applicationIds[0],
     }));
+
+    return { records, syncToken: newSyncToken };
   }
 
   /**

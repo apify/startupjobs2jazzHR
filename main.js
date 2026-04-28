@@ -8,22 +8,32 @@ import Worker from './src/worker.js';
 
 await Actor.init();
 
+const SYNC_TOKEN_KEY = 'ashbyCandidateSyncToken';
+
 // Initialize state values
 const input = await Actor.getInput();
 const { startupJobsToken, ashbyToken } = input;
 // Open a named dataset
 const dataset = await Actor.apifyClient.dataset('k76VMuW7xHGMHN911');
+const kv = await Actor.openKeyValueStore();
 
 const worker = await Worker.create(startupJobsToken, ashbyToken);
 log.info('Startup job list done');
+
+let currentSyncToken = await kv.getValue(SYNC_TOKEN_KEY);
+log.info('Loaded Ashby syncToken', { hasToken: !!currentSyncToken });
 
 try {
   const { items: stateRecords } = await dataset.listItems({ limit: 1000, desc: true });
 
   // Initialize values from state
   log.info('Initiate state');
-  const initialRecords = await worker.getNewRecords(stateRecords);
+  const { records: initialRecords, syncToken: nextToken } = await worker.getNewRecords(stateRecords, currentSyncToken);
   await dataset.pushItems(initialRecords);
+  if (nextToken) {
+    await kv.setValue(SYNC_TOKEN_KEY, nextToken);
+    currentSyncToken = nextToken;
+  }
 } catch (err) {
   log.error('Failed to initialize state from records', err);
   throw err;
@@ -53,8 +63,12 @@ try {
 let newRecords = [];
 try {
   log.info('Updating actor state for next runs');
-  newRecords = await worker.getNewRecords(initializedRecords);
+  const { records, syncToken: nextToken } = await worker.getNewRecords(initializedRecords, currentSyncToken);
+  newRecords = records;
   await dataset.pushItems(newRecords);
+  if (nextToken) {
+    await kv.setValue(SYNC_TOKEN_KEY, nextToken);
+  }
 } catch (err) {
   log.error('Failed to update state from records for next runs', err);
   throw err;

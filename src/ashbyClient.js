@@ -24,19 +24,49 @@ export default class AshbyClient {
   }
 
   /**
-   * Recursively gets all applicant/jobs records. By default Ashby only provides 100 results per page
-   * @param {string} cursor
-   * @returns {array} applicant/job record
+   * Gets candidate records from Ashby. With a syncToken, returns only candidates created/updated
+   * since the token was issued. Without one, performs a full sync. Returns a fresh syncToken from
+   * the final page so the caller can persist it for the next run.
+   * Falls back to a full sync if the provided syncToken is expired/invalid.
+   * @param {string} [syncToken]
+   * @returns {Promise<{ results: object[], syncToken: string }>}
    */
-  async applicants2JobsList(cursor) {
-    let results = [];
-    const { data } = await api.post(`${this.url}/candidate.list`, cursor ? { cursor } : {}, { headers: { Authorization: `Basic ${this.token}` } });
-    if (data.moreDataAvailable) {
-      results = [...data.results, ...await this.applicants2JobsList(data.nextCursor)];
-    } else {
-      results = [...results, ...data.results];
+  async applicants2JobsList(syncToken) {
+    const headers = { Authorization: `Basic ${this.token}` };
+    const initialBody = syncToken ? { syncToken } : {};
+
+    const { data: firstPage } = await api.post(`${this.url}/candidate.list`, initialBody, { headers });
+
+    if (firstPage.success === false) {
+      if (syncToken && firstPage.errors?.some((e) => String(e).toLowerCase().includes('sync_token'))) {
+        log.warning('Ashby syncToken invalid/expired, falling back to full sync', { errors: firstPage.errors });
+        return this.applicants2JobsList();
+      }
+      
+      throw new Error(`Ashby candidate.list failed: ${JSON.stringify(firstPage.errors)}`);
     }
-    return results;
+
+    let results = [...firstPage.results];
+    let nextCursor = firstPage.nextCursor;
+    let moreDataAvailable = firstPage.moreDataAvailable;
+    let lastSyncToken = firstPage.syncToken;
+
+    while (moreDataAvailable) {
+      // Ashby requires both cursor and the original syncToken on every paginated call within a sync session
+      const pageBody = syncToken ? { cursor: nextCursor, syncToken } : { cursor: nextCursor };
+      const { data: page } = await api.post(`${this.url}/candidate.list`, pageBody, { headers });
+
+      if (page.success === false) {
+        throw new Error(`Ashby candidate.list pagination failed: ${JSON.stringify(page.errors)}`);
+      }
+
+      results = [...results, ...page.results];
+      nextCursor = page.nextCursor;
+      moreDataAvailable = page.moreDataAvailable;
+      lastSyncToken = page.syncToken || lastSyncToken;
+    }
+
+    return { results, syncToken: lastSyncToken };
   }
 
   /**
