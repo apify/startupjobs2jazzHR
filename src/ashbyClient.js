@@ -201,15 +201,15 @@ export default class AshbyClient {
     }
   }
 
-  async createApplication(jobId, applicantId) {
+  async createApplication(jobId, candidateId) {
     const { data } = await api.post(`${this.url}/application.create`, {
-      candidateId: applicantId,
+      candidateId,
       jobId,
       interviewStageId: 'FirstPreInterviewScreen',
       sourceId: '4a3af47a-28a7-462d-a8c5-edb55668b8c1', // StartupJobs inbound
     }, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.errors) {
-      log.error(ERROR_TYPES.CREATE_NOTE, { message: data.errors });
+      log.error(ERROR_TYPES.CREATE_APPLICANT, { message: data.errors, candidateId, jobId });
     }
   }
 }
