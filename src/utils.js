@@ -1,15 +1,66 @@
-const moment = require('moment');
-const { utils: apifyUtils } = require('apify');
-const { STARTUP_JOBS_ID_PREFIX } = require('./consts');
+import { htmlToText, sleep } from '@crawlee/utils';
+import { log } from 'apify';
+import moment from 'moment';
 
-const { htmlToText, sleep, log } = apifyUtils;
+import { STARTUP_JOBS_ID_PREFIX } from './consts.js';
+
 /**
- * Trims, lowercases and dashcase given string
- * @param {string} title
- * @returns {string} formated string
+ * Normalizes a title into a comparison key: strips diacritics and punctuation,
+ * lowercases, and dashcases. Both Ashby job titles and StartupJobs offer names pass
+ * through this, so the comparison stays symmetric and only cosmetic noise is removed.
+ * @param {string} str
+ * @returns {string} normalized key
  */
-function stringToKey(str) {
-  return str.trim().replace(/\s+/g, '-').toLowerCase();
+export function stringToKey(str) {
+  return str
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // strip diacritics (e.g. Vývojář -> Vyvojar)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // any run of non-alphanumerics -> single dash
+    .replace(/^-+|-+$/g, ''); // trim leading/trailing dashes
+}
+
+/**
+ * Removes parenthetical qualifiers from a title, e.g.
+ * "Support Engineer (days shifts)" -> "Support Engineer".
+ * StartupJobs uses these to split one Ashby job into several postings (shift variants);
+ * stripping them lets those variants map back to the single base Ashby job.
+ * @param {string} str
+ * @returns {string}
+ */
+function stripParentheticals(str) {
+  return str.replace(/\([^)]*\)/g, ' ');
+}
+
+/**
+ * Returns all localized names for a StartupJobs offer. Tolerant of both shapes seen in the
+ * API: `offer.name` on application-detail objects and `offer.names` on list objects.
+ * @param {object} offer
+ * @returns {string[]}
+ */
+export function getOfferNames(offer) {
+  return (offer?.name || offer?.names || []).map((entry) => entry?.name).filter(Boolean);
+}
+
+/**
+ * Resolves the Ashby job id for a StartupJobs offer by title.
+ * Tier 1: exact (normalized) match of any localized offer name against an Ashby job title.
+ * Tier 2: same, but ignoring parenthetical qualifiers (shift variants -> base job).
+ * Returns undefined if nothing matches.
+ * @param {Object<string, {title: string}>} appliableJobs keyed by Ashby job id
+ * @param {object} offer StartupJobs offer
+ * @returns {string|undefined} Ashby job id
+ */
+export function matchAshbyJobId(appliableJobs, offer) {
+  const names = getOfferNames(offer);
+  const jobIds = Object.keys(appliableJobs);
+
+  const exactKeys = names.map(stringToKey);
+  const exactMatch = jobIds.find((jobId) => exactKeys.includes(appliableJobs[jobId].title));
+  if (exactMatch) return exactMatch;
+
+  const strippedKeys = names.map((name) => stringToKey(stripParentheticals(name)));
+  return jobIds.find((jobId) => strippedKeys.includes(appliableJobs[jobId].title));
 }
 
 /**
@@ -17,7 +68,7 @@ function stringToKey(str) {
  * @param {string} name
  * @returns {object} firstname and lastname
  */
-function splitFullname(name) {
+export function splitFullname(name) {
   const [first_name, ...restOfName] = name.split(' ');
   return {
     first_name,
@@ -25,7 +76,7 @@ function splitFullname(name) {
   };
 }
 
-class ApplicationTransformer {
+export class ApplicationTransformer {
   constructor(application) {
     this.application = application;
   }
@@ -34,49 +85,40 @@ class ApplicationTransformer {
    * Transforms startupjob application to jazzHR application
    * @returns {object} transform application
    */
-  buildApplicationPayload(jobId, base64Resume) {
+  buildApplicationPayload(jobId) {
     const {
-      name, email, created_at, phone, linkedin, text, id,
+      name, email, created_at, phone, linkedin,
     } = this.application;
 
-    const { first_name, last_name } = splitFullname(name);
-
-    const payload = {
-      first_name,
-      last_name: last_name || '[NO LAST NAME PROVIDED]',
+    const newPayload = {
+      name,
       email,
-      apply_date: moment(created_at).format('YYYY-MM-DD'),
-      phone,
-      linkedin: linkedin.url,
-      coverletter: htmlToText(text),
-      job: jobId,
-      source: STARTUP_JOBS_ID_PREFIX + id,
+      phoneNumber: phone,
+      linkedInUrl: linkedin?.url || null,
+      createdAt: moment(created_at).format('YYYY-MM-DD'),
     };
 
-    if (base64Resume) payload['base64-resume'] = base64Resume;
-
-    return payload;
+    return newPayload;
   }
 
   /**
-   * Finds first document in attachments and gets its url
+   * Finds all text-based attachments in application
    * @param {object} application
-   * @returns {string} resume url
+   * @returns {array} attachments
    */
-  buildResumeUrl() {
+  getAttachments() {
     const {
       attachments,
     } = this.application;
 
-    const potentialResume = attachments
-      .find((attachment) => attachment.url.endsWith('.pdf')
+    return attachments.filter((attachment) => (
+      attachment.url.endsWith('.pdf')
         || attachment.url.endsWith('.doc')
         || attachment.url.endsWith('.docx')
         || attachment.url.endsWith('.rtf')
         || attachment.url.endsWith('.odt')
-        || attachment.url.endsWith('.txt'));
-
-    return (potentialResume || {}).url;
+        || attachment.url.endsWith('.txt')
+    ));
   }
 
   /**
@@ -91,9 +133,7 @@ class ApplicationTransformer {
     if (notes) result.push(`Startup jobs note: ${notes}`);
 
     if (attachments.length > 0) {
-      result.push(`Startup jobs attachment links: ${attachments.reduce(
-        (acc, attachment) => `${acc + attachment.url},\n`, '',
-      )}`);
+      result.push(`Startup jobs attachment links: ${attachments.reduce((acc, attachment) => `${acc + attachment.url},\n`, '')}`);
     }
     return result;
   }
@@ -104,7 +144,7 @@ class ApplicationTransformer {
  * @param {object} source
  * @returns {string} startupjobs candidate id
  */
-function parseStartupJobsIdFromJazzHR(source) {
+export function parseStartupJobsIdFromJazzHR(source) {
   return source.replace(STARTUP_JOBS_ID_PREFIX, '');
 }
 
@@ -113,17 +153,6 @@ function parseStartupJobsIdFromJazzHR(source) {
  * @param {ArrayBuffer} buffer
  * @returns {string} in base64
  */
-function bufferToBase64(buffer) {
+export function bufferToBase64(buffer) {
   return Buffer.from(buffer, 'binary').toString('base64');
 }
-
-module.exports = {
-  stringToKey,
-  splitFullname,
-  ApplicationTransformer,
-  parseStartupJobsIdFromJazzHR,
-  htmlToText,
-  sleep,
-  log,
-  bufferToBase64,
-};
