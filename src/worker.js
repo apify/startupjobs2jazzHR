@@ -3,8 +3,8 @@ import { sleep } from '@crawlee/utils';
 import { log } from 'apify';
 import StartupJobsClient from './startupJobsClient.js';
 import AshbyClient from './ashbyClient.js';
-import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey } from './utils.js';
-import { SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
+import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey, matchAshbyJobId, getOfferNames } from './utils.js';
+import { ERROR_TYPES, SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
 
 /**
  * Worker should not be instantiated via contructor but via build method
@@ -72,7 +72,7 @@ export default class Worker {
     const applicationsWithDetails = await this.startupJobs.applicationsWithDetails(applications
       .filter((application) => !!application.offer)
       .filter((application) => !records.some((record) => record.source && parseStartupJobsIdFromJazzHR(record.source) === application.id))
-      .filter((application) => Object.values(this.appliableJobs).find(({ title }) => stringToKey(application.offer.names[0].name)))
+      .filter((application) => matchAshbyJobId(this.appliableJobs, application.offer))
       .map((application) => application.id));
 
     return applicationsWithDetails;
@@ -86,16 +86,30 @@ export default class Worker {
     await Promise.map(applications, async (application) => {
       const applicationTransformer = new ApplicationTransformer(application);
 
-      const jobKey = stringToKey(application.offer.name[0].name);
-      const jobId = Object.keys(this.appliableJobs).find((key) => this.appliableJobs[key].title === jobKey);
+      const jobId = matchAshbyJobId(this.appliableJobs, application.offer);
+
+      if (!jobId) {
+        // No Ashby job matched this offer title. Surface it loudly so the job can be renamed:
+        // without a jobId the candidate cannot be attached to an application and would otherwise
+        // silently land as a lead. We still create the candidate below so it is not lost.
+        log.error(ERROR_TYPES.JOB_NOT_MATCHED, {
+          offerNames: getOfferNames(application.offer),
+          availableJobTitles: Object.values(this.appliableJobs).map(({ title }) => title),
+        });
+      }
 
       const attachments = applicationTransformer.getAttachments();
 
       const ashbyApplication = applicationTransformer.buildApplicationPayload(jobId);
       const ashbyCandidateId = await this.jazzHR.createApplicant(ashbyApplication);
 
+      if (!ashbyCandidateId) return;
+
       await this.jazzHR.uploadAttachments(ashbyCandidateId, attachments);
-      await this.jazzHR.createApplication(jobId, ashbyCandidateId);
+
+      if (jobId) {
+        await this.jazzHR.createApplication(jobId, ashbyCandidateId);
+      }
 
       // Make sure the jazzHR application is created
       await sleep(SLEEP_AFTER_TRANSFER);

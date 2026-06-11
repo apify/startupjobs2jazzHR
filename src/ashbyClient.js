@@ -87,9 +87,16 @@ export default class AshbyClient {
     const { data } = await api.post(`${this.url}/candidate.create`, applicant, {
       headers: { Authorization: `Basic ${this.token}` },
     });
-    if (data.errors) {
-      log.error(ERROR_TYPES.CREATE_APPLICANT, { message: data.errors });
+    
+    if (data.errors || !data.results?.id) {
+      log.error(ERROR_TYPES.CREATE_APPLICANT, {
+        message: data.errors,
+        applicant: { name: applicant.name, email: applicant.email },
+      });
+
+      return null;
     }
+
     return data.results.id;
   }
 
@@ -209,7 +216,7 @@ export default class AshbyClient {
       sourceId: '4a3af47a-28a7-462d-a8c5-edb55668b8c1', // StartupJobs inbound
     }, { headers: { Authorization: `Basic ${this.token}` } });
     if (data.errors) {
-      log.error(ERROR_TYPES.CREATE_APPLICANT, { message: data.errors, candidateId, jobId });
+      log.error(ERROR_TYPES.CREATE_APPLICATION, { message: data.errors, candidateId, jobId });
     }
   }
 }
