@@ -2,7 +2,7 @@ import { htmlToText, sleep } from '@crawlee/utils';
 import { log } from 'apify';
 import moment from 'moment';
 
-import { STARTUP_JOBS_ID_PREFIX } from './consts.js';
+import { DOCUMENT_EXTENSIONS, STARTUP_JOBS_ID_PREFIX } from './consts.js';
 
 /**
  * Normalizes a title into a comparison key: strips diacritics and punctuation,
@@ -76,6 +76,25 @@ export function splitFullname(name) {
   };
 }
 
+/**
+ * StartupJobs serves files with a query string appended ("....pdf?_hash=...&dl=0"), so the
+ * extension cannot be read off the end of the raw URL. Check the original filename first and
+ * fall back to the URL's path.
+ * @param {object} attachment
+ * @returns {boolean}
+ */
+function isDocumentAttachment({ originalFilename, url }) {
+  const names = [originalFilename];
+
+  try {
+    names.push(new URL(url).pathname);
+  } catch {
+    names.push(url);
+  }
+
+  return names.some((name) => name && DOCUMENT_EXTENSIONS.some((extension) => name.toLowerCase().endsWith(extension)));
+}
+
 export class ApplicationTransformer {
   constructor(application) {
     this.application = application;
@@ -103,22 +122,12 @@ export class ApplicationTransformer {
 
   /**
    * Finds all text-based attachments in application
-   * @param {object} application
    * @returns {array} attachments
    */
   getAttachments() {
-    const {
-      attachments,
-    } = this.application;
+    const { attachments = [] } = this.application;
 
-    return attachments.filter((attachment) => (
-      attachment.url.endsWith('.pdf')
-        || attachment.url.endsWith('.doc')
-        || attachment.url.endsWith('.docx')
-        || attachment.url.endsWith('.rtf')
-        || attachment.url.endsWith('.odt')
-        || attachment.url.endsWith('.txt')
-    ));
+    return attachments.filter(isDocumentAttachment);
   }
 
   /**

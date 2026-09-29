@@ -106,26 +106,31 @@ export default class AshbyClient {
    * @param {Array<Object>} attachments
   */
   async uploadAttachments(applicantId, attachments) {
+    // Filenames arrive as e.g. "Jan_Novak_CV_EN.pdf", so the keyword has to be matched anywhere in
+    // the name. Falls back to index 0, the first document being the likeliest resume.
     const suspectedResumeIndex = Math.max(
       0,
-      attachments.findIndex((attachment) => RESUME_KEYWORDS.includes(attachment.originalFilename.toLowerCase()))
+      attachments.findIndex((attachment) => {
+        const filename = (attachment.originalFilename || '').toLowerCase();
+        return RESUME_KEYWORDS.some((keyword) => filename.includes(keyword));
+      })
     );
 
     return Promise.all(attachments.map(async (attachment, i) => {
-      const fileResponse = await api.get(attachment.url, { responseType: 'arraybuffer' });
+      try {
+        const fileResponse = await api.get(attachment.url, { responseType: 'arraybuffer' });
 
-      if (fileResponse.data.errors) {
-        log.error(ERROR_TYPES.FETCH_ATTACHMENT, { message: fileResponse.data.errors });
+        const file = new Uint8Array(fileResponse.data).buffer;
+        const fileName = attachment.originalFilename;
+        const fileType = fileResponse.headers['content-type'];
+
+        return i === suspectedResumeIndex
+          ? this.uploadResume(applicantId, file, fileName, fileType)
+          : this.uploadAttachment(applicantId, file, fileName, fileType);
+      } catch (err) {
+        log.error(ERROR_TYPES.FETCH_ATTACHMENT, { message: err.message, url: attachment.url, applicantId });
         return false;
       }
-
-      const file = new Uint8Array(fileResponse.data).buffer;
-      const fileName = attachment.originalFilename;
-      const fileType = fileResponse.headers['Content-Type'];
-
-      return i === suspectedResumeIndex
-        ? this.uploadResume(applicantId, file, fileName, fileType)
-        : this.uploadAttachment(applicantId, file, fileName, fileType);
     }));
   }
 

@@ -18,6 +18,8 @@ export const ERROR_TYPES = {
   JOB_NOT_MATCHED: 'JOB_NOT_MATCHED',
 };
 
+export const DOCUMENT_EXTENSIONS = ['.pdf', '.doc', '.docx', '.rtf', '.odt', '.txt'];
+
 export const RESUME_KEYWORDS = [
   'resume',
   'cv'
