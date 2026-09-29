@@ -10,12 +10,30 @@ export default class AshbyClient {
   }
 
   /**
-   * Return open jobs from Ashby
-   * @returns {array} job list
+   * Return open jobs from Ashby, following pagination to the end.
+   * @returns {Promise<array>} job list
    */
   async openJobList() {
-    const { data } = await api.post(`${this.url}/job.list`, { data: { status: ['Open'] } }, { headers: { Authorization: `Basic ${this.token}` } });
-    return data.results;
+    const headers = { Authorization: `Basic ${this.token}` };
+    let results = [];
+    let cursor;
+    let moreDataAvailable = true;
+
+    while (moreDataAvailable) {
+      const body = cursor ? { status: ['Open'], cursor } : { status: ['Open'] };
+      const { data } = await api.post(`${this.url}/job.list`, body, { headers });
+
+      if (data.success === false) {
+        throw new Error(`Ashby job.list failed: ${JSON.stringify(data.errors)}`);
+      }
+
+      results = [...results, ...data.results];
+      cursor = data.nextCursor;
+      // Guard against a truthy flag with no cursor, which would otherwise spin forever.
+      moreDataAvailable = !!data.moreDataAvailable && !!cursor;
+    }
+
+    return results;
   }
 
   async applicantDetail(id) {

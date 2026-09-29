@@ -34,6 +34,8 @@ export default class Worker {
         return acc;
       }, {});
 
+    log.info('Ashby open jobs resolved', { count: jobs.length, titles: jobs.map((job) => job.title) });
+
     return new Worker(startupJobs, ashbyClient, appliableJobs);
   }
 
