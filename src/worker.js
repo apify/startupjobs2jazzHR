@@ -81,45 +81,100 @@ export default class Worker {
   }
 
   /**
-   * Posts new applications to jazzHR
+   * Posts new applications to Ashby.
+   * Applications from the same person are handled one after another, because two of them running
+   * concurrently would both find no existing candidate and create the same person twice.
    * @param {array} applications
    */
   async postNewApplications(applications) {
-    await Promise.map(applications, async (application) => {
-      const applicationTransformer = new ApplicationTransformer(application);
+    const byPerson = applications.reduce((acc, application) => {
+      const key = application.email ? application.email.trim().toLowerCase() : `no-email:${application.id}`;
+      acc[key] = acc[key] || [];
+      acc[key].push(application);
+      return acc;
+    }, {});
 
-      const jobId = matchAshbyJobId(this.appliableJobs, application.offer);
+    await Promise.map(Object.values(byPerson), async (personApplications) => {
+      for (const application of personApplications) {
+        try {
+          await this.transferApplication(application);
+        } catch (err) {
+          // One application must not abort the batch. Anything skipped here is picked up by the
+          // next run, because Ashby is what decides whether it still needs transferring.
+          const { errors, ...context } = err;
+          log.error(ERROR_TYPES.TRANSFER_APPLICATION, {
+            reason: err.message,
+            errors,
+            ...context,
+            startupJobsApplicationId: application.id,
+            name: application.name,
+          });
+        }
+      }
+    }, { concurrency: TRANSFER_APPLICATIONS_CONCURRENCY });
+  }
+
+  /**
+   * Transfers a single StartupJobs application to Ashby, reusing the candidate when they already
+   * exist there. Ashby decides what has already been transferred, so rerunning over the same window
+   * creates nothing new and candidates entered by hand are not duplicated either.
+   * @param {object} application
+   */
+  async transferApplication(application) {
+    const applicationTransformer = new ApplicationTransformer(application);
+    const jobId = matchAshbyJobId(this.appliableJobs, application.offer);
+
+    if (!jobId) {
+      // No Ashby job matched this offer title. Surface it loudly so the job can be renamed:
+      // without a jobId the candidate cannot be attached to an application and would otherwise
+      // silently land as a lead. We still create the candidate below so it is not lost.
+      log.error(ERROR_TYPES.JOB_NOT_MATCHED, {
+        offerNames: getOfferNames(application.offer),
+        availableJobTitles: Object.values(this.appliableJobs).map(({ title }) => title),
+      });
+    }
+
+    const existing = await this.jazzHR.findCandidateByEmail(application.email);
+    let ashbyCandidateId;
+
+    if (existing) {
+      const context = { startupJobsApplicationId: application.id, name: application.name, candidateId: existing.id };
 
       if (!jobId) {
-        // No Ashby job matched this offer title. Surface it loudly so the job can be renamed:
-        // without a jobId the candidate cannot be attached to an application and would otherwise
-        // silently land as a lead. We still create the candidate below so it is not lost.
-        log.error(ERROR_TYPES.JOB_NOT_MATCHED, {
-          offerNames: getOfferNames(application.offer),
-          availableJobTitles: Object.values(this.appliableJobs).map(({ title }) => title),
-        });
+        log.info('Skipping, candidate is already in Ashby and the offer matches no open job', context);
+        return;
       }
 
-      const attachments = applicationTransformer.getAttachments();
+      const appliedJobIds = await this.jazzHR.candidateApplicationJobIds(existing.applicationIds);
 
-      const ashbyApplication = applicationTransformer.buildApplicationPayload(jobId);
-      const ashbyCandidateId = await this.jazzHR.createApplicant(ashbyApplication);
+      if (appliedJobIds.includes(jobId)) {
+        log.info('Skipping, candidate already has an application on this job', { ...context, jobId });
+        return;
+      }
 
+      ashbyCandidateId = existing.id;
+    } else {
+      ashbyCandidateId = await this.jazzHR.createApplicant(applicationTransformer.buildApplicationPayload());
       if (!ashbyCandidateId) return;
+    }
 
-      await this.jazzHR.uploadAttachments(ashbyCandidateId, attachments);
-
-      if (jobId) {
-        await this.jazzHR.createApplication(jobId, ashbyCandidateId);
-      }
-
-      // Make sure the jazzHR application is created
+    // The application is created first and throws on failure, so a candidate is never left holding
+    // files and notes without one. A retry would otherwise add a second copy of both.
+    if (jobId) {
+      await this.jazzHR.createApplication(jobId, ashbyCandidateId);
+      // Give Ashby a moment to make the application visible before attaching anything to it.
       await sleep(SLEEP_AFTER_TRANSFER);
+    }
 
-      // Create notes to the application (containes notes from startupjobs, attachment links if multiple or not a document, starupjobs ID)
-      await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {
-        await this.jazzHR.createNote(ashbyCandidateId, note);
-      });
-    }, { concurrency: TRANSFER_APPLICATIONS_CONCURRENCY });
+    // Best effort, and deliberately so: uploads and notes log their own failures rather than
+    // throwing, because raising here would undo nothing and would repeat the application on the
+    // next run. The cost is that a file lost to a transient error is not retried.
+    // Uploaded for an existing candidate too, since a second application can carry a different CV.
+    await this.jazzHR.uploadAttachments(ashbyCandidateId, applicationTransformer.getAttachments());
+
+    // Create notes to the application (contains notes from startupjobs, attachment links if multiple or not a document)
+    await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {
+      await this.jazzHR.createNote(ashbyCandidateId, note);
+    });
   }
 }

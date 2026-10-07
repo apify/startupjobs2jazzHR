@@ -1,7 +1,8 @@
+import Promise from 'bluebird';
 import { log } from 'apify';
 
 import api from './api.js';
-import { ERROR_TYPES, RESUME_KEYWORDS } from './consts.js';
+import { ASHBY_GET_APPLICATIONS_CONCURRENCY, ERROR_TYPES, RESUME_KEYWORDS } from './consts.js';
 
 export default class AshbyClient {
   constructor(token) {
@@ -34,6 +35,59 @@ export default class AshbyClient {
     }
 
     return results;
+  }
+
+  /**
+   * Finds an existing Ashby candidate by email address.
+   * Ashby searches by email and/or name, so the returned rows are confirmed against the address we
+   * asked for rather than trusting the first result.
+   * @param {string} email
+   * @returns {Promise<object|null>} candidate, or null when there is no exact match
+   */
+  async findCandidateByEmail(email) {
+    if (!email) return null;
+
+    const { data } = await api.post(`${this.url}/candidate.search`, { email }, {
+      headers: { Authorization: `Basic ${this.token}` },
+    });
+
+    // Fails closed: returning null here would read as "no such candidate" and duplicate them.
+    if (data.success === false) {
+      throw Object.assign(new Error(ERROR_TYPES.SEARCH_CANDIDATE), { errors: data.errors, email });
+    }
+
+    const wanted = email.trim().toLowerCase();
+    const matches = ({ value }) => value?.trim().toLowerCase() === wanted;
+
+    return (data.results || []).find((candidate) => (
+      matches(candidate.primaryEmailAddress || {}) || (candidate.emailAddresses || []).some(matches)
+    )) || null;
+  }
+
+  /**
+   * Returns the ids of the jobs a candidate already has applications on.
+   * application.list has no candidate filter. Passing one is silently accepted and ignored, and the
+   * whole organisation's applications come back, so the candidate's own applicationIds are resolved
+   * individually instead.
+   * @param {string[]} applicationIds
+   * @returns {Promise<string[]>} job ids
+   */
+  async candidateApplicationJobIds(applicationIds) {
+    const headers = { Authorization: `Basic ${this.token}` };
+
+    const jobIds = await Promise.map(applicationIds, async (applicationId) => {
+      const { data } = await api.post(`${this.url}/application.info`, { applicationId }, { headers });
+
+      // Throws rather than returning a partial answer, which would read as "not applied yet" and
+      // duplicate the application. The context rides on the error so the caller logs it once.
+      if (data.success === false) {
+        throw Object.assign(new Error(ERROR_TYPES.FETCH_APPLICATION), { errors: data.errors, applicationId });
+      }
+
+      return data.results?.job?.id;
+    }, { concurrency: ASHBY_GET_APPLICATIONS_CONCURRENCY });
+
+    return jobIds.filter(Boolean);
   }
 
   async applicantDetail(id) {
@@ -238,8 +292,10 @@ export default class AshbyClient {
       interviewStageId: 'FirstPreInterviewScreen',
       sourceId: '4a3af47a-28a7-462d-a8c5-edb55668b8c1', // StartupJobs inbound
     }, { headers: { Authorization: `Basic ${this.token}` } });
+    // Throws so the caller stops here: nothing else may be attached to a candidate who never got
+    // onto the job, or the next run would add a second copy of it.
     if (data.errors) {
-      log.error(ERROR_TYPES.CREATE_APPLICATION, { message: data.errors, candidateId, jobId });
+      throw Object.assign(new Error(ERROR_TYPES.CREATE_APPLICATION), { errors: data.errors, candidateId, jobId });
     }
   }
 }

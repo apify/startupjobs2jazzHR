@@ -101,10 +101,10 @@ export class ApplicationTransformer {
   }
 
   /**
-   * Transforms startupjob application to jazzHR application
-   * @returns {object} transform application
+   * Transforms a StartupJobs application into an Ashby candidate payload
+   * @returns {object} candidate payload
    */
-  buildApplicationPayload(jobId) {
+  buildApplicationPayload() {
     const {
       name, email, created_at, phone, linkedin,
     } = this.application;

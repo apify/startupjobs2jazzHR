@@ -23,7 +23,9 @@ axiosRetry(api, {
   retries: 5,
   retryDelay: (retryCount, error) => axiosRetry.exponentialDelay(retryCount, error, RETRY_FACTOR),
   retryCondition: (error) => {
-    return error.response?.status >= 500;
+    const status = error.response?.status;
+    // 429 included: the Ashby candidate and application lookups multiply the calls per run.
+    return status === 429 || status >= 500;
   },
   onRetry: (retryCount, error, requestConfig) => {
     log.warning(`Retrying request to ${requestConfig.url} (attempt ${retryCount}/5) due to ${error.response?.status} error`);
