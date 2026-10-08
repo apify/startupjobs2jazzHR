@@ -1,10 +1,15 @@
 export const STARTUP_JOBS_ID_PREFIX = 'Actor/Startupjobs - ';
+export const STARTUP_JOBS_GET_APPLICATIONS_CONCURRENCY = 20;
+
+export const SYNC_STORE_KEY = 'startupjobs-ashby-sync';
+export const SYNC_STORE_TOKEN_KEY = 'ashbyCandidateSyncToken';
+
+export const JOB_TITLE_MAPPING_KEY = 'jobTitleMapping';
 
 export const JAZZ_HR_POST_ERROR = 'JazzHR POST error';
 
 export const SLEEP_AFTER_TRANSFER = 2000;
 
-export const STARTUP_JOBS_GET_APPLICATIONS_CONCURRENCY = 20;
 export const ASHBY_GET_APPLICATIONS_CONCURRENCY = 5;
 export const TRANSFER_APPLICATIONS_CONCURRENCY = 10;
 
@@ -16,6 +21,7 @@ export const ERROR_TYPES = {
   UPLOAD_ATTACHMENT: 'UPLOAD_ATTACHMENT',
   UPLOAD_RESUME: 'UPLOAD_RESUME',
   JOB_NOT_MATCHED: 'JOB_NOT_MATCHED',
+  MAPPING_UNRESOLVED: 'MAPPING_UNRESOLVED',
   SEARCH_CANDIDATE: 'SEARCH_CANDIDATE',
   FETCH_APPLICATION: 'FETCH_APPLICATION',
   TRANSFER_APPLICATION: 'TRANSFER_APPLICATION',
@@ -25,5 +31,5 @@ export const DOCUMENT_EXTENSIONS = ['.pdf', '.doc', '.docx', '.rtf', '.odt', '.t
 
 export const RESUME_KEYWORDS = [
   'resume',
-  'cv'
+  'cv',
 ];

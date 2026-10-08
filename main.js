@@ -5,11 +5,10 @@
 // Import Apify SDK. For more information, see https://sdk.apify.com/
 import { Actor, log } from 'apify';
 import Worker from './src/worker.js';
+import { getOfferNames } from './src/utils.js';
+import { JOB_TITLE_MAPPING_KEY, SYNC_STORE_KEY, SYNC_STORE_TOKEN_KEY } from './src/consts.js';
 
 await Actor.init();
-
-const SYNC_STORE_KEY = 'startupjobs-ashby-sync';
-const SYNC_STORE_TOKEN_KEY = 'ashbyCandidateSyncToken';
 
 // Initialize state values
 const input = await Actor.getInput();
@@ -18,7 +17,22 @@ const { startupJobsToken, ashbyToken } = input;
 const dataset = await Actor.apifyClient.dataset('k76VMuW7xHGMHN911');
 const kv = await Actor.openKeyValueStore(SYNC_STORE_KEY);
 
-const worker = await Worker.create(startupJobsToken, ashbyToken);
+// Job title overrides, maintained by hand in the key-value store. Never fatal: a record that is
+// missing, unreadable or the wrong shape only means no overrides, and matching falls back to titles.
+let jobTitleMapping = {};
+try {
+  const stored = await kv.getValue(JOB_TITLE_MAPPING_KEY);
+
+  if (stored && (typeof stored !== 'object' || Array.isArray(stored))) {
+    log.error(`"${JOB_TITLE_MAPPING_KEY}" must be an object of "offer title": "ashby job title" pairs, ignoring it`, { stored });
+  } else {
+    jobTitleMapping = stored || {};
+  }
+} catch (err) {
+  log.error(`Could not read "${JOB_TITLE_MAPPING_KEY}" from the "${SYNC_STORE_KEY}" store, continuing without overrides`, { message: err.message });
+}
+
+const worker = await Worker.create(startupJobsToken, ashbyToken, jobTitleMapping);
 log.info('Startup job list done');
 
 let currentSyncToken = await kv.getValue(SYNC_STORE_TOKEN_KEY);
@@ -41,7 +55,7 @@ try {
 }
 
 const { items: initializedRecords } = await dataset.listItems({ limit: 1000, desc: true });
-log.info('initialized records', { initializedRecords })
+log.info('Initialized records', { count: initializedRecords.length });
 let postable = [];
 try {
   // Get new startupjobs application
@@ -54,7 +68,14 @@ try {
 
 try {
   // Post to Ashby
-  log.info('Transferring applications', { total: postable.length, applications: postable });
+  log.info('Transferring applications', {
+    total: postable.length,
+    applications: postable.map(({
+      id, name, created_at: createdAt, offer,
+    }) => ({
+      id, name, createdAt, offer: getOfferNames(offer),
+    })),
+  });
   await worker.postNewApplications(postable);
 } catch (err) {
   log.error('Failed to POST new applications', err);

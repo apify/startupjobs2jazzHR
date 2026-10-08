@@ -1,8 +1,7 @@
-import { htmlToText, sleep } from '@crawlee/utils';
 import { log } from 'apify';
 import moment from 'moment';
 
-import { DOCUMENT_EXTENSIONS, STARTUP_JOBS_ID_PREFIX } from './consts.js';
+import { DOCUMENT_EXTENSIONS, ERROR_TYPES, STARTUP_JOBS_ID_PREFIX } from './consts.js';
 
 /**
  * Normalizes a title into a comparison key: strips diacritics and punctuation,
@@ -43,24 +42,69 @@ export function getOfferNames(offer) {
 }
 
 /**
- * Resolves the Ashby job id for a StartupJobs offer by title.
- * Tier 1: exact (normalized) match of any localized offer name against an Ashby job title.
- * Tier 2: same, but ignoring parenthetical qualifiers (shift variants -> base job).
- * Returns undefined if nothing matches.
- * @param {Object<string, {title: string}>} appliableJobs keyed by Ashby job id
- * @param {object} offer StartupJobs offer
+ * The open Ashby job titles as they are actually written, for error messages.
+ * @param {Object<string, {name: string}>} appliableJobs
+ * @returns {string[]}
+ */
+export function getJobTitles(appliableJobs) {
+  return Object.values(appliableJobs).map(({ name }) => name);
+}
+
+/**
+ * Finds the Ashby job whose title matches any of the given titles, exactly first and then ignoring
+ * parenthetical qualifiers, so StartupJobs shift variants collapse onto one base job.
+ * @param {Object<string, {title: string}>} appliableJobs keyed by Ashby job id, title is the comparison key
+ * @param {string[]} titles
  * @returns {string|undefined} Ashby job id
  */
-export function matchAshbyJobId(appliableJobs, offer) {
-  const names = getOfferNames(offer);
+function findJobIdByTitles(appliableJobs, titles) {
   const jobIds = Object.keys(appliableJobs);
+  const keys = titles.map(stringToKey);
 
-  const exactKeys = names.map(stringToKey);
-  const exactMatch = jobIds.find((jobId) => exactKeys.includes(appliableJobs[jobId].title));
+  const exactMatch = jobIds.find((jobId) => keys.includes(appliableJobs[jobId].title));
   if (exactMatch) return exactMatch;
 
-  const strippedKeys = names.map((name) => stringToKey(stripParentheticals(name)));
+  const strippedKeys = titles.map((title) => stringToKey(stripParentheticals(title)));
   return jobIds.find((jobId) => strippedKeys.includes(appliableJobs[jobId].title));
+}
+
+/**
+ * Resolves the maintained "offer title -> Ashby job title" overrides into "offer key -> job id",
+ * once per run. An entry naming a job that is not open is reported and dropped, so the application
+ * falls back to title matching rather than being lost.
+ * @param {Object<string, string>} rawMapping as stored in the key-value store
+ * @param {Object<string, {title: string, name: string}>} appliableJobs keyed by Ashby job id
+ * @returns {Object<string, string>} normalized offer title -> Ashby job id
+ */
+export function buildTitleMapping(rawMapping, appliableJobs) {
+  const availableJobTitles = getJobTitles(appliableJobs);
+
+  return Object.entries(rawMapping).reduce((acc, [offerTitle, ashbyTitle]) => {
+    const jobId = typeof ashbyTitle === 'string' ? findJobIdByTitles(appliableJobs, [ashbyTitle]) : undefined;
+
+    if (!jobId) {
+      log.error(ERROR_TYPES.MAPPING_UNRESOLVED, { offerTitle, ashbyTitle, availableJobTitles });
+      return acc;
+    }
+
+    acc[stringToKey(offerTitle)] = jobId;
+    return acc;
+  }, {});
+}
+
+/**
+ * Resolves the Ashby job id for a StartupJobs offer.
+ * The maintained mapping wins outright; otherwise the offer's localized names are matched by title.
+ * @param {Object<string, {title: string, name: string}>} appliableJobs keyed by Ashby job id
+ * @param {object} offer StartupJobs offer
+ * @param {Object<string, string>} titleMapping from buildTitleMapping
+ * @returns {string|undefined} Ashby job id
+ */
+export function matchAshbyJobId(appliableJobs, offer, titleMapping) {
+  const names = getOfferNames(offer);
+
+  const mapped = names.map((name) => titleMapping[stringToKey(name)]).find(Boolean);
+  return mapped || findJobIdByTitles(appliableJobs, names);
 }
 
 /**

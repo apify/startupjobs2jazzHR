@@ -3,8 +3,8 @@ import { sleep } from '@crawlee/utils';
 import { log } from 'apify';
 import StartupJobsClient from './startupJobsClient.js';
 import AshbyClient from './ashbyClient.js';
-import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey, matchAshbyJobId, getOfferNames } from './utils.js';
-import { ERROR_TYPES, SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
+import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey, matchAshbyJobId, buildTitleMapping, getJobTitles, getOfferNames } from './utils.js';
+import { ERROR_TYPES, JOB_TITLE_MAPPING_KEY, SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
 
 /**
  * Worker should not be instantiated via contructor but via build method
@@ -12,31 +12,38 @@ import { ERROR_TYPES, SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } 
  * Uses startupJobs and jazzHR clients
  */
 export default class Worker {
-  constructor(startupJobs, ashbyClient, appliableJobs) {
+  constructor(startupJobs, ashbyClient, appliableJobs, titleMapping) {
     this.startupJobs = startupJobs;
     this.jazzHR = ashbyClient;
     this.appliableJobs = appliableJobs;
+    this.titleMapping = titleMapping;
   }
 
   /**
    * Used to initialize Worker
    * @param {string} startupJobsToken
    * @param {string} ashbyToken
+   * @param {Object<string, string>} [jobTitleMapping] offer title -> Ashby job title overrides
    * @returns {Worker} instance
    */
-  static async create(startupJobsToken, ashbyToken) {
+  static async create(startupJobsToken, ashbyToken, jobTitleMapping) {
     const startupJobs = new StartupJobsClient(startupJobsToken);
     const ashbyClient = new AshbyClient(ashbyToken);
     const jobs = await ashbyClient.openJobList();
     const appliableJobs = jobs
       .reduce((acc, job) => {
-        acc[job.id] = { title: stringToKey(job.title), planId: job.defaultInterviewPlanId };
+        acc[job.id] = { title: stringToKey(job.title), name: job.title, planId: job.defaultInterviewPlanId };
         return acc;
       }, {});
 
-    log.info('Ashby open jobs resolved', { count: jobs.length, titles: jobs.map((job) => job.title) });
+    // The single place the mapping is defaulted, so everything downstream can assume an object.
+    const mapping = jobTitleMapping || {};
+    const titleMapping = buildTitleMapping(mapping, appliableJobs);
 
-    return new Worker(startupJobs, ashbyClient, appliableJobs);
+    log.info('Ashby open jobs resolved', { count: jobs.length, titles: jobs.map((job) => job.title) });
+    log.info('Job title mapping loaded', { configured: Object.keys(mapping).length, resolved: Object.keys(titleMapping).length });
+
+    return new Worker(startupJobs, ashbyClient, appliableJobs, titleMapping);
   }
 
   /**
@@ -70,14 +77,29 @@ export default class Worker {
    */
   async getNewApplications(records) {
     const applications = await this.startupJobs.applicationList();
-    // Get applications details from startupJobs for those that are applications to jobs listed by jazzHR
-    const applicationsWithDetails = await this.startupJobs.applicationsWithDetails(applications
-      .filter((application) => !!application.offer)
-      .filter((application) => !records.some((record) => record.source && parseStartupJobsIdFromJazzHR(record.source) === application.id))
-      .filter((application) => matchAshbyJobId(this.appliableJobs, application.offer))
-      .map((application) => application.id));
+    const unmatched = [];
 
-    return applicationsWithDetails;
+    const matched = applications.filter((application) => {
+      if (!application.offer) return false;
+      if (matchAshbyJobId(this.appliableJobs, application.offer, this.titleMapping)) return true;
+
+      unmatched.push(application);
+      return false;
+    });
+
+    // Reported before the applications are dropped, otherwise they vanish without a trace.
+    if (unmatched.length) {
+      log.error(ERROR_TYPES.JOB_NOT_MATCHED, {
+        count: unmatched.length,
+        offerNames: [...new Set(unmatched.flatMap((application) => getOfferNames(application.offer)))],
+        availableJobTitles: getJobTitles(this.appliableJobs),
+        hint: `Pair these in the "${JOB_TITLE_MAPPING_KEY}" record to route them to an Ashby job.`,
+      });
+    }
+
+    return this.startupJobs.applicationsWithDetails(matched
+      .filter((application) => !records.some((record) => record.source && parseStartupJobsIdFromJazzHR(record.source) === application.id))
+      .map((application) => application.id));
   }
 
   /**
@@ -122,17 +144,7 @@ export default class Worker {
    */
   async transferApplication(application) {
     const applicationTransformer = new ApplicationTransformer(application);
-    const jobId = matchAshbyJobId(this.appliableJobs, application.offer);
-
-    if (!jobId) {
-      // No Ashby job matched this offer title. Surface it loudly so the job can be renamed:
-      // without a jobId the candidate cannot be attached to an application and would otherwise
-      // silently land as a lead. We still create the candidate below so it is not lost.
-      log.error(ERROR_TYPES.JOB_NOT_MATCHED, {
-        offerNames: getOfferNames(application.offer),
-        availableJobTitles: Object.values(this.appliableJobs).map(({ title }) => title),
-      });
-    }
+    const jobId = matchAshbyJobId(this.appliableJobs, application.offer, this.titleMapping);
 
     const existing = await this.jazzHR.findCandidateByEmail(application.email);
     let ashbyCandidateId;

@@ -12,7 +12,7 @@ api.interceptors.request.use((request) => {
   if (request.method === 'post') {
     logData = {
       ...logData,
-      ..._.omit(request.data, 'apikey', 'base64-resume'),
+      ..._.omit(request.data, 'apikey', 'base64-resume', 'phoneNumber', 'linkedInUrl'),
     };
   }
   log.info('Starting request', logData);
