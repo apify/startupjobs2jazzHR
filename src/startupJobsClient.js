@@ -1,13 +1,13 @@
-const moment = require('moment');
-const Promise = require('bluebird');
-const api = require('./api');
-const { STARTUP_JOBS_GET_APPLICATIONS_CONCURRENCY } = require('./consts');
-const { bufferToBase64 } = require('./utils');
+import moment from 'moment';
+import Promise from 'bluebird';
+import api from './api.js';
+import { STARTUP_JOBS_GET_APPLICATIONS_CONCURRENCY } from './consts.js';
+import { bufferToBase64 } from './utils.js';
 
 /**
  * StartupJobs endpointes wrapper
  */
-class StartupJobsClient {
+export default class StartupJobsClient {
   constructor(token) {
     this.token = token;
     this.url = 'https://api.startupjobs.cz/company';
@@ -35,7 +35,10 @@ class StartupJobsClient {
    * @returns {array} applications
    */
   async applicationList() {
-    const { data } = await api.get(`${this.url}/applications`, this.getConfig());
+    const todayDate = new Date().toISOString().slice(0, 10);
+    const tomorrowDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const { data } = await api.get(`${this.url}/applications?created_at.gt=${todayDate}&created_at.lt=${tomorrowDate}`, this.getConfig());
     return data;
   }
 
@@ -83,5 +86,3 @@ class StartupJobsClient {
     return bufferToBase64(data);
   }
 }
-
-module.exports = StartupJobsClient;

@@ -1,6 +1,9 @@
-const axios = require('axios');
-const _ = require('underscore');
-const { log } = require('./utils');
+import axios from 'axios';
+import axiosRetry from 'axios-retry';
+import _ from 'underscore';
+import { log } from 'apify';
+
+const RETRY_FACTOR = 1000;
 
 const api = axios.create();
 
@@ -9,11 +12,24 @@ api.interceptors.request.use((request) => {
   if (request.method === 'post') {
     logData = {
       ...logData,
-      ..._.omit(request.data, 'apikey', 'base64-resume'),
+      ..._.omit(request.data, 'apikey', 'base64-resume', 'phoneNumber', 'linkedInUrl'),
     };
   }
   log.info('Starting request', logData);
   return request;
 });
 
-module.exports = api;
+axiosRetry(api, {
+  retries: 5,
+  retryDelay: (retryCount, error) => axiosRetry.exponentialDelay(retryCount, error, RETRY_FACTOR),
+  retryCondition: (error) => {
+    const status = error.response?.status;
+    // 429 included: the Ashby candidate and application lookups multiply the calls per run.
+    return status === 429 || status >= 500;
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    log.warning(`Retrying request to ${requestConfig.url} (attempt ${retryCount}/5) due to ${error.response?.status} error`);
+  },
+});
+
+export default api

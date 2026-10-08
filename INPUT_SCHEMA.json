@@ -10,15 +10,15 @@
       "description": "Your StartupJobs token. You have to contact the StartupJobs support to generate it for you.",
       "editor": "textfield"
     },
-    "jazzHRToken": {
-      "title": "JazzHR token",
+    "ashbyToken": {
+      "title": "Ashby token",
       "type": "string",
-      "description": "Your JazzHR token. <a href='https://success.jazzhr.com/hc/en-us/articles/222540508-API-Overview#whereiskey'> Here is how to find your token.</a>",
+      "description": "Your Ashby token. <a href='https://developers.ashbyhq.com/reference/authentication'> Here is how to find your token.</a>",
       "editor": "textfield"
     }
   },
   "required": [
     "startupJobsToken",
-    "jazzHRToken"
+    "ashbyToken"
   ]
 }

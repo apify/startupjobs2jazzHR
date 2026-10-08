@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "This actor transfers new applications from startupjobs, that are connected to the job offer that exists in jazzHR and puts them into jazzHR.",
   "main": "main.js",
+  "type": "module",
   "scripts": {
     "start": "node main.js",
     "test": "echo \"Error: oops, the actor has no tests yet, sad!\" && exit 1"
@@ -24,15 +25,18 @@
   },
   "homepage": "https://github.com/nguyeda1/startupjobs2jazzHR#readme",
   "dependencies": {
-    "apify": "^2.2.0",
-    "axios": "^0.24.0",
+    "@apify/utilities": "^2.15.1",
+    "@crawlee/utils": "^3.13.0",
+    "apify": "^3.4.0",
+    "axios": "^1.7.9",
+    "axios-retry": "^4.5.0",
     "bluebird": "^3.7.2",
-    "moment": "^2.29.1",
-    "underscore": "^1.12.0"
+    "moment": "^2.30.1",
+    "underscore": "^1.13.7"
   },
   "devDependencies": {
-    "eslint": "^7.21.0",
-    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.22.1"
   }
 }
