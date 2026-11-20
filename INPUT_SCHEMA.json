@@ -1,6 +1,6 @@
 {
   "title": "startupjobs2jazzHR actor input schema",
-  "description": "Please fill in the StartupJobs and JazzHR token. The tokens are needed for the actor to work properly.",
+  "description": "Please fill in the StartupJobs and Ashby tokens. The tokens are needed for the actor to work properly.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
@@ -8,13 +8,15 @@
       "title": "StartupJobs token",
       "type": "string",
       "description": "Your StartupJobs token. You have to contact the StartupJobs support to generate it for you.",
-      "editor": "textfield"
+      "editor": "textfield",
+      "isSecret": true
     },
     "ashbyToken": {
       "title": "Ashby token",
       "type": "string",
       "description": "Your Ashby token. <a href='https://developers.ashbyhq.com/reference/authentication'> Here is how to find your token.</a>",
-      "editor": "textfield"
+      "editor": "textfield",
+      "isSecret": true
     }
   },
   "required": [
