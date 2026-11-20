@@ -34,6 +34,7 @@ const worker = await Worker.create(startupJobsToken, ashbyToken, jobTitleMapping
 log.info('Startup job list done');
 
 let postable = [];
+let stats;
 try {
   // Get new startupjobs application
   log.info('Get startupjobs applications');
@@ -53,13 +54,18 @@ try {
       id, name, createdAt, offer: getOfferNames(offer),
     })),
   });
-  await worker.postNewApplications(postable);
+  stats = await worker.postNewApplications(postable);
 } catch (err) {
   log.error('Failed to POST new applications', err);
   throw err;
 }
 
-// Log run stats
-log.info('Current run stats', { postedTotal: postable.length });
+log.info('Current run stats', { total: postable.length, ...stats });
+
+// Failed applications are logged one by one and do not stop the batch, so the run is failed here
+// at the end, otherwise it would stay green with nothing transferred and nobody alerted.
+if (stats.failed) {
+  await Actor.fail(`${stats.failed} of ${postable.length} applications failed to transfer, see TRANSFER_APPLICATION errors above`);
+}
 
 await Actor.exit();

@@ -81,6 +81,7 @@ export default class Worker {
    * Applications from the same person are handled one after another, because two of them running
    * concurrently would both find no existing candidate and create the same person twice.
    * @param {array} applications
+   * @returns {Promise<{ transferred: number, skipped: number, failed: number }>}
    */
   async postNewApplications(applications) {
     const byPerson = applications.reduce((acc, application) => {
@@ -90,11 +91,15 @@ export default class Worker {
       return acc;
     }, {});
 
+    const stats = { transferred: 0, skipped: 0, failed: 0 };
+
     await Promise.map(Object.values(byPerson), async (personApplications) => {
       for (const application of personApplications) {
         try {
-          await this.transferApplication(application);
+          const transferred = await this.transferApplication(application);
+          stats[transferred ? 'transferred' : 'skipped'] += 1;
         } catch (err) {
+          stats.failed += 1;
           // One application must not abort the batch. Anything skipped here is picked up by the
           // next run, because Ashby is what decides whether it still needs transferring.
           const { errors, ...context } = err;
@@ -108,6 +113,8 @@ export default class Worker {
         }
       }
     }, { concurrency: TRANSFER_APPLICATIONS_CONCURRENCY });
+
+    return stats;
   }
 
   /**
@@ -115,6 +122,7 @@ export default class Worker {
    * exist there. Ashby decides what has already been transferred, so rerunning over the same window
    * creates nothing new and candidates entered by hand are not duplicated either.
    * @param {object} application
+   * @returns {Promise<boolean>} false when it was already in Ashby and nothing was transferred
    */
   async transferApplication(application) {
     const applicationTransformer = new ApplicationTransformer(application);
@@ -128,20 +136,21 @@ export default class Worker {
 
       if (!jobId) {
         log.info('Skipping, candidate is already in Ashby and the offer matches no open job', context);
-        return;
+        return false;
       }
 
       const appliedJobIds = await this.jazzHR.candidateApplicationJobIds(existing.applicationIds);
 
       if (appliedJobIds.includes(jobId)) {
         log.info('Skipping, candidate already has an application on this job', { ...context, jobId });
-        return;
+        return false;
       }
 
       ashbyCandidateId = existing.id;
     } else {
       ashbyCandidateId = await this.jazzHR.createApplicant(applicationTransformer.buildApplicationPayload());
-      if (!ashbyCandidateId) return;
+      // createApplicant has already logged why, the throw only gets this counted as a failure.
+      if (!ashbyCandidateId) throw new Error(ERROR_TYPES.CREATE_APPLICANT);
     }
 
     // The application is created first and throws on failure, so a candidate is never left holding
@@ -162,5 +171,7 @@ export default class Worker {
     await Promise.map(applicationTransformer.buildApplicationNotes(), async (note) => {
       await this.jazzHR.createNote(ashbyCandidateId, note);
     });
+
+    return true;
   }
 }
