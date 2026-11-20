@@ -7,6 +7,10 @@ const RETRY_FACTOR = 1000;
 
 const api = axios.create();
 
+// Ashby uses POST for everything, so its reads are told apart by the endpoint name.
+const ASHBY_READ_ENDPOINT = /\.(list|search|info)$/;
+const isReadRequest = ({ method, url } = {}) => method === 'get' || ASHBY_READ_ENDPOINT.test(new URL(url).pathname);
+
 api.interceptors.request.use((request) => {
   let logData = { method: request.method.toUpperCase(), url: request.url };
   if (request.method === 'post') {
@@ -25,7 +29,11 @@ axiosRetry(api, {
   retryCondition: (error) => {
     const status = error.response?.status;
     // 429 included: the Ashby candidate and application lookups multiply the calls per run.
-    return status === 429 || status >= 500;
+    // A 429 means the request was not processed, so it is safe to repeat anything.
+    if (status === 429) return true;
+    // A 5xx may come after the write went through, and repeating an Ashby create would duplicate
+    // the record. Writes are left to the next run, which checks Ashby before creating anything.
+    return status >= 500 && isReadRequest(error.config);
   },
   onRetry: (retryCount, error, requestConfig) => {
     log.warning(`Retrying request to ${requestConfig.url} (attempt ${retryCount}/5) due to ${error.response?.status} error`);
