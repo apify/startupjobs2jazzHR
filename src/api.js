@@ -32,4 +32,29 @@ axiosRetry(api, {
   },
 });
 
+/**
+ * An AxiosError carries the request config and the raw request/response, which include the
+ * Authorization header, and it ends up in logs whole (log.error, uncaught crash dump).
+ * Rethrow only what is useful for debugging. Registered after axiosRetry so retries still
+ * see the original error.
+ */
+api.interceptors.response.use(undefined, (error) => {
+  if (!axios.isAxiosError(error)) throw error;
+
+  const { config = {}, response } = error;
+  const data = response?.data;
+  const sanitized = new Error(error.message);
+  sanitized.name = 'HttpError';
+  Object.assign(sanitized, {
+    code: error.code,
+    method: config.method?.toUpperCase(),
+    url: config.url,
+    status: response?.status,
+    data: typeof data === 'string' ? data.slice(0, 1000) : (_.isObject(data) && !(data instanceof ArrayBuffer) && !Buffer.isBuffer(data) ? data : undefined),
+  });
+  // log.error(msg, err) only copies enumerable props, and Error's own `message` is not one.
+  Object.defineProperty(sanitized, 'message', { enumerable: true });
+  throw sanitized;
+});
+
 export default api
