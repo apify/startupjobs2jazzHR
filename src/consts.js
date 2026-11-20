@@ -1,8 +1,6 @@
-export const STARTUP_JOBS_ID_PREFIX = 'Actor/Startupjobs - ';
 export const STARTUP_JOBS_GET_APPLICATIONS_CONCURRENCY = 20;
 
 export const SYNC_STORE_KEY = 'startupjobs-ashby-sync';
-export const SYNC_STORE_TOKEN_KEY = 'ashbyCandidateSyncToken';
 
 export const JOB_TITLE_MAPPING_KEY = 'jobTitleMapping';
 

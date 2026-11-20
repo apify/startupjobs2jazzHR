@@ -19,15 +19,12 @@ To get a StartupJobs token you need to contact their support.
 }
 ```
 ## Run state
-The actor keeps a record of already processed applications in the dataset, so it does not fetch their details from JazzHR unnecessarily on each run.
-​
+The actor keeps no state of its own. Ashby decides what was already transferred: an applicant is matched to an existing candidate by email, and an application is skipped when that candidate already applied to the same job.
+
 ## Process overview
-1. Initialize state based on which the actor will filter transferable applications (state loaded from dataset and from JazzHR)
-2. Gets new StartupJobs applications and filters them by the following conditions:
-    1. Application was not posted before - determined by comparing with state.
-    2. Application is connected to job offer also listed on JazzHR as well. Decided based on JazzHR and StartupJobs offer name equality.
-3. POST filtered applications to JazzHR.
-4. Updates current state for next run.   
+1. Loads open Ashby jobs and the optional `jobTitleMapping` overrides.
+2. Gets today's StartupJobs applications whose offer matches an open Ashby job.
+3. Transfers each one to Ashby, reusing the candidate when they already exist and skipping jobs they already applied to.
 
 ## Documentation reference
 - [Apify SDK](https://sdk.apify.com/)

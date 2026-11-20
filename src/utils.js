@@ -1,7 +1,7 @@
 import { log } from 'apify';
 import moment from 'moment';
 
-import { DOCUMENT_EXTENSIONS, ERROR_TYPES, STARTUP_JOBS_ID_PREFIX } from './consts.js';
+import { DOCUMENT_EXTENSIONS, ERROR_TYPES } from './consts.js';
 
 /**
  * Normalizes a title into a comparison key: strips diacritics and punctuation,
@@ -190,15 +190,6 @@ export class ApplicationTransformer {
     }
     return result;
   }
-}
-
-/**
- * Gets startupjobs candidate id from jazzHR source
- * @param {object} source
- * @returns {string} startupjobs candidate id
- */
-export function parseStartupJobsIdFromJazzHR(source) {
-  return source.replace(STARTUP_JOBS_ID_PREFIX, '');
 }
 
 /**

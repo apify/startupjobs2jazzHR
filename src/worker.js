@@ -3,7 +3,7 @@ import { sleep } from '@crawlee/utils';
 import { log } from 'apify';
 import StartupJobsClient from './startupJobsClient.js';
 import AshbyClient from './ashbyClient.js';
-import { ApplicationTransformer, parseStartupJobsIdFromJazzHR, stringToKey, matchAshbyJobId, buildTitleMapping, getJobTitles, getOfferNames } from './utils.js';
+import { ApplicationTransformer, stringToKey, matchAshbyJobId, buildTitleMapping, getJobTitles, getOfferNames } from './utils.js';
 import { ERROR_TYPES, JOB_TITLE_MAPPING_KEY, SLEEP_AFTER_TRANSFER, TRANSFER_APPLICATIONS_CONCURRENCY } from './consts.js';
 
 /**
@@ -47,35 +47,11 @@ export default class Worker {
   }
 
   /**
-   * Gets candidate records from Ashby that are not saved in dataset yet.
-   * Uses an Ashby syncToken when provided so subsequent runs only fetch deltas.
-   * @param {array} existingRecords
-   * @param {string} [syncToken]
-   * @returns {Promise<{ records: object[], syncToken: string }>}
-   */
-  async getNewRecords(existingRecords, syncToken) {
-    const { results: applicants2Jobs, syncToken: newSyncToken } = await this.jazzHR.applicants2JobsList(syncToken);
-    const newApplicants2Jobs = applicants2Jobs.filter((record) => !existingRecords.find((existingRecord) => existingRecord.id === record.id));
-
-    log.info('newApplicationsDetails', { fetched: applicants2Jobs.length, newSinceDataset: newApplicants2Jobs.length });
-
-    const records = newApplicants2Jobs.map((record) => ({
-      id: record.id,
-      applyDate: record.createdAt,
-      email: record.primaryEmailAddress?.value,
-      source: record.source?.id,
-      jazzHrApplicationId: record.applicationIds[0],
-    }));
-
-    return { records, syncToken: newSyncToken };
-  }
-
-  /**
-   * Get new applications from startupjobs
-   * @param {array} records
+   * Get new applications from startupjobs. Nothing is filtered out here: whether an application
+   * was already transferred is decided against Ashby in transferApplication.
    * @returns {array} new applications
    */
-  async getNewApplications(records) {
+  async getNewApplications() {
     const applications = await this.startupJobs.applicationList();
     const unmatched = [];
 
@@ -97,9 +73,7 @@ export default class Worker {
       });
     }
 
-    return this.startupJobs.applicationsWithDetails(matched
-      .filter((application) => !records.some((record) => record.source && parseStartupJobsIdFromJazzHR(record.source) === application.id))
-      .map((application) => application.id));
+    return this.startupJobs.applicationsWithDetails(matched.map((application) => application.id));
   }
 
   /**
